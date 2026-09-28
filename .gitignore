@@ -1,0 +1,25 @@
+# Allowlist: ignore everything in ~/.claude, then opt in only the shareable
+# configuration. Anything new Claude Code writes here stays untracked by default.
+/*
+
+!/.gitignore
+!/README.md
+!/LICENSE
+!/settings.json
+!/agents/
+!/skills/
+
+# Skills synced from claude.ai (managed by Claude Code, not authored here)
+/skills/synced/
+
+# Machine-local overrides and secrets, wherever they appear
+settings.local.json
+*.local.*
+.env
+.env.*
+*.pem
+*.key
+.credentials*
+
+# OS / editor noise
+.DS_Store
