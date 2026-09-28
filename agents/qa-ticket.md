@@ -27,13 +27,15 @@ exactly. When invoked directly, apply the same workflow:
 - Jira MCP for requirements and reporting. Acceptance criteria are sometimes
   stored in `customfield_10160`.
 - GitLab MCP for the MR, diff, pipelines, and artifacts. The base branch is
-  normally `release/v#.#.#` or `release/PRJ/v#.#.#`, not `main`, `master`, or
+  normally `release/v#.#.#` or `release/<project>/v#.#.#`, not `main`, `master`, or
   `develop`.
 - Playwright MCP (or whatever browser automation is configured) for UI
   testing. Do not assume specific tool names; use what is available.
 
-If meaningful acceptance criteria are missing, invoke the
-`qa-acceptance-criteria` skill, then re-read the ticket before testing.
+If meaningful acceptance criteria are missing, derive them yourself by
+reading `~/.claude/skills/qa-acceptance-criteria/SKILL.md` and following its
+rules, including its Jira comment. You run as a subagent and cannot start
+another one.
 
 ## Test server safety
 

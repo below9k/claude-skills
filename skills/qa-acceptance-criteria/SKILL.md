@@ -1,11 +1,10 @@
 ---
-
 name: qa-acceptance-criteria
 description: Generate missing acceptance criteria for a Jira ticket by analyzing the ticket, its implementation, and associated GitLab/GitHub MR or PR. Use when a ticket has no acceptance criteria or its acceptance criteria are insufficient for meaningful QA.
 context: fork
 agent: qa-acceptance-criteria
 effort: high
-------------
+---
 
 # Generate QA Acceptance Criteria
 
@@ -33,6 +32,21 @@ Do not invent requirements that have no reasonable basis in the available eviden
 
 The criteria should be useful for a subsequent QA pass.
 
+### Evidence hierarchy
+
+Weigh evidence roughly in this order:
+
+1. Explicit requirements in the Jira ticket
+2. Explicit requirements in Jira comments or linked documentation
+3. MR/PR description
+4. Product behavior implied by linked work
+5. Existing application behavior
+6. Implementation changes
+7. Existing automated tests
+
+Lower-level implementation evidence should not override explicit higher-level requirements.
+If evidence conflicts, report the conflict.
+
 ## Workflow
 
 ### 1. Retrieve the ticket
@@ -48,6 +62,8 @@ Inspect:
 * attachments
 * related issues
 * current status
+
+Acceptance criteria are sometimes stored in `customfield_10160` rather than the description.
 
 Determine whether acceptance criteria already exist.
 
@@ -135,6 +151,27 @@ Include appropriate criteria for:
 
 Do not create unnecessary criteria simply to increase coverage.
 
+#### Avoid requirement inflation
+
+A missing acceptance-criteria section is not permission to expand scope. Do not add criteria for:
+
+* unrelated cleanup
+* stylistic preferences
+* hypothetical future behavior
+* generic quality standards
+* features not represented in the ticket or implementation
+* implementation choices that have no observable consequence
+
+#### Handling ambiguity
+
+When the evidence does not establish an expected behavior:
+
+1. do not invent the answer
+2. identify the ambiguity
+3. state the competing interpretations if useful
+4. write a QA criterion only if a reasonable one still exists
+5. otherwise flag it for clarification in QA Notes
+
 ### 5. Classify confidence
 
 For every generated criterion, assign a confidence level:
@@ -154,7 +191,7 @@ If a critical requirement cannot be established, call it out instead of presenti
 
 ### 6. Post to Jira
 
-Post the generated criteria to the ticket.
+Post the generated criteria to the ticket as a new Jira comment.
 
 Clearly identify them as **QA-derived acceptance criteria**.
 

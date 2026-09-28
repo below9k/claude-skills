@@ -1,4 +1,9 @@
-# Savi subagents (release/dsp branch)
+# Savi subagents
+
+These agents are Savi-specific and branch-aware. Each one first detects which Savi line it is in:
+`savi.yaml` at the repo root means the **main line** (the repo's `CLAUDE.md` / `architecture.md`
+win), and its absence means the **DSP line** (`release/dsp/*`), whose rules are inlined into the
+agents. Outside a Savi repo (no `lerna/packages/`) they stop and say so.
 
 Agent definitions for the Claude Code `Agent` tool. Each file is one agent; the frontmatter
 `description` is what the model matches against when deciding to delegate, so it is written
@@ -30,19 +35,19 @@ The two reviewers are deliberately split and can run at the same time.
 answers "is this correct". Neither tries to do the other's job, which keeps both short and
 keeps their findings separable.
 
-## Branch-specific facts these agents rely on
+## How the two lines differ
 
-This checkout tracks `release/dsp/v1.1.3`. It differs from the `~/develop/savi` main-line
-checkout in ways that matter — the agents there are **not** interchangeable with these.
+The DSP line (e.g. `release/dsp/v1.1.3`) differs from the main line in ways that matter; the
+agents' main-line notes cover the differences below.
 
-| | `~/develop/savi` (main line) | here (`release/dsp/v1.1.3`) |
+| | main line (`~/develop/savi`) | DSP line (`release/dsp/v1.1.3`) |
 | --- | --- | --- |
-| `CLAUDE.md` / `architecture.md` / `PACKAGES.md` | present | **absent** — rules are inlined into the agents |
+| `CLAUDE.md` / `architecture.md` | present (no `PACKAGES.md`) | **absent** — rules are inlined into the agents |
 | Process list | `savi.yaml` + `savi-prod.yaml` (both must be updated) | **`dev.app.config.js`** — one file, `daemonSrvs` + `driverProcesses` |
 | pm2 | `./cli-bazel/pm2` (regenerates ecosystem from yaml) | **`./cli-bazel/pm2.sh`** (passthrough to the vendored pm2) |
 | Bring-up | `./cli-bazel/pm2 start` | **`./cli-bazel/start-savi.sh`** (does `pm2 delete all` first) |
-| Test macro | `savi_node_test` live; mocha commented out | **`savi_mocha_test` live** → `//<pkg>:unit_test` (19 packages) |
-| Spec style | `node:test` + `node:assert/strict` | **mocha + chai + sinon**, 74 specs, zero `node:test` |
+| Test macro | `savi_node_test` in some packages; specs mixed (`node:test`, jest-style, older chai) | **`savi_mocha_test` live** → `//<pkg>:unit_test` (19 packages) |
+| Spec style | match the package's existing specs | **mocha + chai + sinon**, 74 specs, zero `node:test` |
 | Fast local runner | `.ai-dev/tools/jest-shim/` | **none** — see "Toolchain state" below |
 | `cli-bazel/test-unit.sh` | stale (lists targets that don't exist) | target list **accurate**, but its bazel runner is blocked |
 | WebSocket client split | two packages | **no websocket packages** — the `websocket` sled-daemon service is the bridge |
@@ -62,7 +67,7 @@ What is the same, and is what the invariant reviewer checks:
 - Interfaces have two sides: caller methods and handler registration methods.
 - IoC `register()` only declares; resolution is lazy and deferred to `start()`.
 
-## Toolchain state (verified 2026-09-09 on this clone)
+## DSP toolchain state (last observed 2026-09-09 — re-check)
 
 Worth knowing before you trust a green result. There are three ways to run the 74 specs and
 none of them works out of the box here:

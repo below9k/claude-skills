@@ -14,7 +14,7 @@ description: >
   Before creating or switching to a feature branch, inspect Git remotes,
   branches, and recent history to determine the appropriate base branch.
   The base branch will typically be a release branch matching
-  release/v#.#.# or release/PRJ/v#.#.#. Do not assume main, master, or
+  release/v#.#.# or release/<project>/v#.#.#. Do not assume main, master, or
   develop is the base branch.
 
   When creating a GitLab merge request, use the user's fork as the source
@@ -95,7 +95,7 @@ Look for release branches matching patterns such as:
 
 ```text
 release/v#.#.#
-release/dsp/v#.#.#
+release/<project>/v#.#.#
 ```
 
 Examples:
@@ -126,7 +126,21 @@ If multiple release branches are plausible and the correct one cannot be determi
 
 Do not silently choose an arbitrary release branch.
 
-Once the base branch is determined, update it before branching:
+Once the base branch is determined, update it before branching.
+
+If the working tree has uncommitted changes, do not let the checkout fail or carry them
+blindly. Create the feature branch directly from the updated remote base instead, which keeps
+the changes in the working tree:
+
+```bash
+git fetch upstream
+git switch -c <feature-branch> upstream/<base-branch>
+```
+
+If `git switch` refuses because the changes conflict with the base, stop and tell the user
+rather than stashing or discarding their work.
+
+With a clean working tree:
 
 ```bash
 git fetch upstream
@@ -183,10 +197,9 @@ The description should:
 
 * Be concise.
 * Describe the actual change.
-* Use lowercase.
-* Use underscores instead of spaces.
+* Use lowercase `kebab-case`: hyphens between words, no spaces or underscores.
 * Avoid unnecessary words.
-* Avoid punctuation other than underscores.
+* Avoid punctuation other than hyphens.
 
 For example:
 
@@ -450,6 +463,18 @@ If CLI tooling is unavailable, provide the appropriate web URL for creating the 
 
 ---
 
+## Link the MR/PR in Jira
+
+After the MR/PR is created, use the Jira MCP to check whether the ticket already links to it
+(remote links, development panel, or an existing comment containing the URL).
+
+If it is not present, add the MR/PR web URL to the ticket as a remote link, or as a short
+comment if remote links are unavailable.
+
+Do not transition the ticket's status.
+
+---
+
 ## Safety / Confirmation Rules
 
 Do not ask for confirmation for ordinary operations that are explicitly requested by the user, such as:
@@ -467,6 +492,7 @@ Do ask for clarification when:
 * The destination fork/remote is ambiguous.
 * The changes contain unrelated modifications that cannot safely be separated.
 * Pushing would require rewriting remote history.
+* Switching to the feature branch would conflict with uncommitted changes.
 * The requested operation would modify or delete someone else's work.
 
 Never:
@@ -509,7 +535,7 @@ Push feature branch to fork
     ↓
 Create MR/PR targeting detected base branch
     ↓
-Add web URl of the MR/PR to JIRA ticket if it is not already present
+Link the MR/PR in Jira if not already present
     ↓
 Report result
 ```
@@ -522,6 +548,7 @@ Branch:   <feature branch>
 Remote:   <fork remote>
 Commit:   <commit hash/message>
 MR/PR:    <URL>
+Jira:     <linked | already linked | not linked, because ...>
 ```
 
 If any step was not completed, state exactly which step failed and why.

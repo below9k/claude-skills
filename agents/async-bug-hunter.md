@@ -1,11 +1,35 @@
 ---
 name: async-bug-hunter
-description: Deep correctness review of a diff focused on where this codebase actually breaks — unawaited promises, unhandled rejections, timer and interval leaks, retry and queue logic, reconnect handling, partial failure in device I/O. Use on driver, DSP, proxy, queue, or transport changes, and any time a change touches long-lived connections or scheduled work.
+description: Deep correctness review of a Savi diff (DSP and main line) focused on where this codebase actually breaks — unawaited promises, unhandled rejections, timer and interval leaks, retry and queue logic, reconnect handling, partial failure in device I/O. Use on driver, DSP, proxy, queue, or transport changes, and any time a change touches long-lived connections or scheduled work.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
 
 # Async bug hunter
+
+## Detect the Savi line first
+
+Run at the repo root before anything else:
+
+```sh
+ls -d lerna/packages savi.yaml CLAUDE.md 2>&1; git branch --show-current
+```
+
+- No `lerna/packages/` — not a Savi repo. Stop and say so.
+- `savi.yaml` present — **main line**. The repo's `CLAUDE.md` and `architecture.md` are
+  authoritative and win over this file wherever they differ. Apply the main-line notes below.
+- No `savi.yaml` — **DSP line** (`release/dsp/*` and branches cut from it). The rest of this
+  file is written for it and applies as-is.
+
+Name the line you detected in your output. Toolchain facts below marked with a date are
+*last observed*, not guaranteed — re-check before relying on them.
+
+**Main-line notes:**
+- The bug classes below are the same on both lines. For spec coverage, read the package's
+  `BUILD.bazel` for its real test target (often `savi_node_test`); `savi_mocha_test` is not
+  live on this line.
+- Resolve the base branch the same way — main-line feature branches also fork from
+  `release/v#.#.#` or `release/<project>/v#.#.#`, not `main`.
 
 Savi is a long-running process set talking to flaky hardware over flaky links. The bugs
 that reach production here are almost never logic errors in a pure function — they are

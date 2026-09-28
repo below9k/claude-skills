@@ -29,172 +29,91 @@ $ARGUMENTS
 
 ## Purpose
 
-Perform end-to-end QA of a Jira ticket or GitLab merge request using an
-actual deployed build.
-
-This skill should validate both:
+Perform end-to-end QA of a Jira ticket or GitLab merge request on an actual
+deployed build, validating both:
 
 1. The implementation satisfies the ticket requirements.
 2. The implementation does not introduce regressions in related existing
    functionality.
 
-Do not treat a successful build, successful installation, or passing unit
-tests as sufficient evidence that the ticket works correctly.
-
-Do not implement fixes unless the user explicitly asks for them. This is an
-independent QA pass.
-
----
+A successful build, installation, or unit-test run is not evidence that the
+ticket works. This is an independent QA pass: do not implement fixes unless
+the user explicitly asks.
 
 ## Inputs
 
-The user may provide:
-
-- Jira ticket, such as `SN-1234`.
-- GitLab merge request.
-- Both Jira ticket and MR.
-- Release branch.
-- Specific artifact.
-- Instruction to test the latest release candidate instead of the MR build.
-- Alternate test server.
+The user may provide a Jira ticket (e.g. `SN-1234`), a GitLab MR, or both; a
+release branch; a specific artifact; an instruction to test the latest
+release candidate instead of the MR build; or an alternate test server.
 
 Infer missing Jira/MR relationships through Jira and GitLab when they are
-clearly linked.
-
-Do not invent ticket numbers, merge requests, release branches, artifacts,
-or requirements.
-
----
+clearly linked. Never invent ticket numbers, MRs, release branches,
+artifacts, or requirements.
 
 ## Default Test Server
 
-The normal QA server is:
+    savis-101627.local            (SSH)
+    http://savis-101627.local/    (web UI)
 
-    savis-101627.local
-
-Normal web interface:
-
-    http://savis-101627.local/
-
-The server is expected to be accessible over SSH.
-
-If the user specifies another test server, use that server instead.
+If the user specifies another test server, use it instead.
 
 ### Server Safety
 
-Before installing an artifact or rebooting the server, verify that the SSH
-connection is to the intended test server.
-
-Inspect identifying information such as:
-
-    hostname
-    hostname -f
-
-The hostname should correspond to the configured test server.
-
-Never run installation or reboot commands on a server whose identity cannot
-be established confidently.
-
-Never infer that an arbitrary SSH host is disposable simply because it is
-reachable.
+Before installing an artifact or rebooting, confirm the SSH session is on the
+intended test server with `hostname` and `hostname -f`. Never install or
+reboot on a host whose identity you cannot establish confidently, and never
+treat an SSH host as disposable merely because it is reachable.
 
 ---
 
 # Phase 1 — Gather Requirements
 
-Use the Jira MCP to retrieve the complete ticket.
+Use the Jira MCP to retrieve the complete ticket: summary, description,
+acceptance criteria (sometimes stored in `customfield_10160`), requirements,
+comments, linked issues, relevant attachments, status, reproduction steps,
+and any referenced branch, MR, commit, or release.
 
-Review:
-
-- Summary.
-- Description.
-- Acceptance criteria (sometimes stored in `customfield_10160`).
-- Requirements.
-- Relevant comments.
-- Linked issues when relevant.
-- Attachments when relevant.
-- Current status.
-- Reported bugs or reproduction steps.
-- Referenced branch, merge request, commit, or release information.
-- Clarifications added after the original description.
-
-Read the actual acceptance criteria. Do not infer acceptance criteria from
-the ticket title alone.
-
-Prefer the most recent explicit Jira clarification when ticket comments
-clarify or supersede older requirements.
-
-If requirements are ambiguous, record the ambiguity as part of the QA
-findings rather than inventing expected behavior.
+Read the actual acceptance criteria; never infer them from the title. Where
+later comments clarify or supersede the original description, prefer the
+most recent explicit clarification. Record ambiguities as QA findings rather
+than inventing expected behavior.
 
 ## Missing Acceptance Criteria
 
-If the ticket has no acceptance criteria, or the existing criteria are
-insufficient to perform meaningful independent QA:
+If the ticket has no acceptance criteria, or they are too vague for
+meaningful independent QA, derive them before testing. This skill runs as a
+subagent and cannot start another, so do it here:
 
-1. Invoke the `qa-acceptance-criteria` skill for this ticket.
-2. Wait for the generated criteria to be posted to Jira.
-3. Re-read the ticket so the QA pass uses the newly generated criteria.
-4. Continue with the normal QA workflow.
-
-Do not independently invent acceptance criteria inside this QA skill when
-the acceptance-criteria skill is available.
+1. Read `~/.claude/skills/qa-acceptance-criteria/SKILL.md`.
+2. Follow its workflow and rules — evidence hierarchy, no requirement
+   inflation, a confidence level and basis per criterion — and post the
+   "QA-Derived Acceptance Criteria" comment to Jira in its format.
+3. Use those criteria as the test plan, and note in the QA report that they
+   were QA-derived.
 
 ## Test Checklist
 
-Build a concrete test checklist from the requirements.
+For each requirement, write down:
 
-For each requirement, determine:
-
-    Requirement
-        ↓
-    Expected behavior
-        ↓
-    Test procedure (including the user interactions to perform)
-        ↓
-    Expected result
+    Requirement → Expected behavior → Test procedure (including the user
+    interactions to perform) → Expected result
 
 ---
 
 # Phase 2 — Inspect the GitLab Change
 
-Use the GitLab MCP to inspect the associated merge request.
+Use the GitLab MCP to inspect the MR: source and target branches, commits,
+the complete diff, description, pipeline status, discussions, available
+artifacts, and existing tests for the changed behavior.
 
-Determine:
+The target is normally `release/v#.#.#` or `release/<project>/v#.#.#`; never
+assume `main`, `master`, or `develop`.
 
-- Source branch.
-- Target/base branch.
-- Commits.
-- Changed files and the complete diff.
-- MR description.
-- Pipeline status.
-- Relevant discussions.
-- Available artifacts.
-- Existing tests related to the changed behavior.
-
-The target branch is commonly:
-
-    release/v#.#.#
-
-or:
-
-    release/PRJ/v#.#.#
-
-Do not assume `main`, `master`, or `develop` is the base.
-
-Compare the implementation against the Jira requirements.
-
-Determine:
-
-- What behavior changed.
-- Which components/services are affected.
-- Interfaces or APIs that changed.
-- Configuration changes.
-- Likely regression surfaces.
-
-Do not limit QA to the files named in the ticket.
-
-Use this information to create the regression test scope.
+Compare the implementation against the Jira requirements and determine what
+behavior changed, which components, services, interfaces, APIs, and
+configuration are affected, and where regressions are likely. Do not limit
+QA to the files named in the ticket. This sets the regression scope for
+Phase 13.
 
 ---
 
@@ -202,21 +121,13 @@ Use this information to create the regression test scope.
 
 ## Default: MR Artifact
 
-Unless instructed otherwise, select the latest successful build artifact
-associated with the merge request being tested.
+Unless instructed otherwise, use the latest successful build artifact for
+the MR, preferably from the latest successful pipeline on the current MR HEAD
+commit. Verify that the pipeline succeeded, and that the artifact belongs to
+the expected branch/MR and commit, has not expired, and is installable on the
+test server.
 
-Prefer an artifact from the latest successful pipeline for the current MR
-HEAD commit.
-
-Verify:
-
-- Pipeline succeeded.
-- Artifact belongs to the expected branch/MR.
-- Artifact corresponds to the expected commit.
-- Artifact has not expired.
-- Artifact is an installable build appropriate for the test server.
-
-Do not silently test an artifact from an older MR commit when a newer commit
+Never silently test an artifact from an older MR commit when a newer commit
 exists.
 
 Record:
@@ -230,160 +141,84 @@ Record:
 
 ## Release Candidate Mode
 
-If the user explicitly asks to test the latest RC, determine the release
-branch on which the ticket/MR is based.
-
-Typical branches:
-
-    release/v#.#.#
-    release/PRJ/v#.#.#
-
-Use GitLab to identify the latest appropriate successful RC artifact for
-that release.
-
-Verify that the selected artifact actually belongs to the intended release.
-
-Record the exact RC/build version being tested.
-
-Do not substitute an RC build for the MR artifact unless the user requested
-RC testing.
+Only if the user explicitly asks to test the latest RC: determine the MR's
+release branch, find its latest successful RC artifact in GitLab, verify the
+artifact actually belongs to that release, and record the exact RC/build
+version. Never substitute an RC for the MR artifact otherwise.
 
 ---
 
 # Phase 4 — Download Artifact
 
-Download the selected artifact from GitLab using the GitLab MCP or other
-configured GitLab tooling.
-
-Verify that the download completed successfully.
-
-When checksums or other artifact integrity information are available, verify
-them.
-
-Do not proceed with an obviously incomplete or corrupt artifact.
+Download the artifact with the GitLab MCP or other configured GitLab
+tooling. Confirm the download completed, verify checksums when available,
+and do not proceed with an incomplete or corrupt artifact.
 
 ---
 
 # Phase 5 — Upload to Test Server
 
-Upload the artifact to:
-
-    /tmp
-
-on the configured test server.
-
-Prefer a unique path when necessary to avoid confusing the new artifact with
-previous QA artifacts.
-
-Example:
-
-    /tmp/<artifact-name>
-
-Verify that the upload completed successfully before installation.
+Upload to `/tmp` on the test server, using a unique path such as
+`/tmp/<artifact-name>` so it cannot be confused with earlier QA artifacts.
+Confirm the upload completed before installing.
 
 ---
 
 # Phase 6 — Install
 
-SSH into the test server.
+SSH in and verify the server identity again. In `/tmp`, extract the artifact
+in its actual format — inspect it rather than assuming; for a tar archive
+this is normally `tar -xf <artifact>`.
 
-Verify the server identity again before performing installation.
+Run the installer packaged with the artifact, or the one the repository
+documents, with the privileges the normal installation requires. Capture its
+output and exit status.
 
-Move to `/tmp` and extract the artifact using the format appropriate to the
-artifact.
-
-For a tar archive, this will normally resemble:
-
-    cd /tmp
-    tar -xf <artifact>
-
-Do not assume the archive format. Inspect it when necessary.
-
-Locate the artifact's installation script/file.
-
-Prefer the installation procedure packaged with the artifact or documented
-by the repository.
-
-Run the installer with the privileges required by the project's normal
-installation process.
-
-Capture installation output and check its exit status.
-
-If installation fails:
-
-1. Capture the relevant error.
-2. Determine whether the failure is caused by the artifact, environment, or
-   installation procedure.
-3. Do not reboot merely to hide or recover from an unexplained failed
-   installation.
-4. Report the failure if it cannot be safely resolved.
+If installation fails: capture the error, determine whether the artifact,
+environment, or procedure is at fault, and report it if it cannot be safely
+resolved. Never reboot to hide or recover from an unexplained failed
+installation.
 
 ---
 
 # Phase 7 — Reboot
 
-After a successful installation, reboot the TEST SERVER:
+After a successful installation, and only after verifying the connected
+machine is the intended test server, reboot it:
 
     reboot -f
 
-Use elevated privileges when required by the server.
-
-This command is permitted only after verifying that the connected machine is
-the intended QA/test server.
-
-Expect the SSH connection to terminate.
-
-Do not treat the resulting disconnect as a test failure.
+Use elevated privileges if required. The SSH connection will drop; that is
+expected, not a test failure.
 
 ---
 
 # Phase 8 — Wait for Recovery
 
-Wait for the test server to become reachable again.
-
-Reconnect using SSH.
-
-Verify:
-
-    hostname
-    uptime
-
-Confirm that the server actually rebooted.
-
-Verify that required application services have started.
-
-Inspect relevant service status and logs when appropriate.
-
-Do not begin functional testing until the system is sufficiently initialized
-to provide meaningful results.
+Wait for the server to become reachable, reconnect, and check `hostname` and
+`uptime` to confirm it actually rebooted. Confirm the required application
+services have started, checking service status and logs as needed. Do not
+begin functional testing until the system is initialized enough for results
+to be meaningful.
 
 ---
 
 # Phase 9 — Verify Installed Build
 
-Before functional testing, confirm that the expected build was installed.
-
-Use the application's available version information, package metadata,
-service information, UI version, or other reliable source.
-
-Compare the installed version against the artifact selected earlier.
-
-Do not perform QA against an unknown build.
-
-Record:
+Confirm the installed build matches the selected artifact, using the
+application's version information, package metadata, service information,
+UI version, or another reliable source.
 
     Expected build:
     Installed build:
 
-If they do not match, stop and investigate before testing the ticket.
+If they differ, stop and investigate. Never QA an unknown build.
 
 ---
 
 # Phase 10 — Ticket Acceptance Testing
 
-Execute the test checklist derived from Jira.
-
-For each requirement record:
+Execute the Phase 1 checklist, recording for each requirement:
 
     Requirement:
     Test:
@@ -391,337 +226,164 @@ For each requirement record:
     Actual:
     Result: PASS | FAIL | BLOCKED
 
-Test actual behavior rather than merely inspecting configuration or code.
-
-Code inspection alone does not prove an acceptance criterion passes when the
-behavior can reasonably be executed.
-
-Use the browser for user-facing functionality (Phase 11).
-
-Use SSH, logs, APIs, services, or other appropriate mechanisms for backend
-and system functionality (Phase 12).
-
-When the feature crosses multiple layers, validate the complete behavior
-rather than testing only one layer.
+Test actual behavior. Code or configuration inspection does not prove a
+criterion passes when the behavior can reasonably be executed. Use the
+browser for user-facing functionality (Phase 11) and SSH, logs, APIs, and
+services for backend and system behavior (Phase 12). When a feature crosses
+layers, validate the complete behavior, not one layer.
 
 ---
 
 # Phase 11 — Live Interactive UI Testing
 
-For any ticket that affects user-facing functionality, perform live,
-interactive testing against the deployed application using the configured
-browser automation tooling, preferably Playwright MCP, at:
+For any ticket that affects user-facing functionality, test the deployed
+application interactively using the configured browser automation,
+preferably Playwright MCP, at `http://savis-101627.local/` or the alternate
+server. Authenticate only with test credentials that are already configured
+and authorized.
 
-    http://savis-101627.local/
+Loading a page, inspecting the DOM, reading page text, looking at
+screenshots, calling APIs directly, reviewing code, or confirming that
+elements exist is **not** UI testing. Interact as a real user would, as
+relevant to the ticket:
 
-or the alternate server specified by the user.
-
-Authenticate only with test credentials that are already configured and
-authorized.
-
-Do not limit browser testing to:
-
-- Checking whether the page loads.
-- Inspecting DOM elements.
-- Reading page text.
-- Inspecting screenshots.
-- Calling APIs directly.
-- Reviewing the implementation.
-- Verifying that elements merely exist.
-
-Interact with the application as a real user would.
-
-This includes, when applicable:
-
-- Navigate through the application's UI.
-- Open pages, dialogs, menus, tabs, and panels.
-- Click buttons and controls.
-- Select options.
-- Enter and edit values.
-- Submit forms.
-- Save configuration changes.
-- Cancel operations and verify cancellation behavior.
-- Delete or remove test-created data when safe.
-- Refresh the page.
-- Navigate away and return.
-- Verify persisted values after reload.
-- Exercise validation and error states.
-- Perform repeated operations when relevant.
-- Verify enabled/disabled states.
-- Verify state transitions.
-- Verify loading behavior.
-- Verify reconnection behavior when relevant.
-- Verify feedback shown to the user.
-- Check the browser console for errors.
-- Check network requests for failures.
+- Navigate the UI; open pages, dialogs, menus, tabs, and panels.
+- Click buttons and controls, select options, enter and edit values.
+- Submit forms and save configuration; cancel operations and verify the
+  cancellation.
+- Refresh, navigate away and return, and verify persisted values after
+  reload.
+- Exercise validation and error states, and repeat operations where
+  relevant.
+- Verify enabled/disabled states, state transitions, loading and
+  reconnection behavior, and the feedback shown to the user.
+- Check the browser console for errors and network requests for failures.
+- Delete test-created data when safe.
 - Verify that actions actually affect the underlying system.
 
-The browser should be used to reproduce the workflow described by the Jira
-ticket from the perspective of an actual user.
+Reproduce the Jira workflow from the user's perspective. If Jira says a user
+can modify a setting, do not stop at confirming the input exists:
 
-For example, if Jira requires that a user can modify a setting, do not merely
-verify that the setting's input exists.
+    Open page → locate setting → record original value → change it → save
+      → verify success → refresh or revisit → verify it persisted
+      → verify resulting system behavior → restore original value
 
-Perform the workflow:
+If a ticket adds a button:
 
-    Open relevant page
-        ↓
-    Locate setting
-        ↓
-    Record original value
-        ↓
-    Change value
-        ↓
-    Save/submit
-        ↓
-    Verify success
-        ↓
-    Refresh or revisit page
-        ↓
-    Verify value persisted
-        ↓
-    Verify resulting system behavior when applicable
-        ↓
-    Restore original value when appropriate
+    Navigate to feature → verify initial state → click → observe behavior
+      → verify UI state → verify backend/system effect
 
-Similarly, if a ticket adds a button:
+Never mark a user-facing criterion PASS without exercising the interaction.
+If testing is blocked, mark it BLOCKED.
 
-    Navigate to feature
-        ↓
-    Verify appropriate initial state
-        ↓
-    Click button
-        ↓
-    Observe resulting behavior
-        ↓
-    Verify UI state
-        ↓
-    Verify backend/system effect when applicable
-
-Do not mark a user-facing acceptance criterion PASS without exercising the
-relevant interaction unless testing is blocked.
-
-If testing is blocked, report the criterion as BLOCKED rather than PASS.
-
-Do not create permanent test infrastructure during a normal QA run. If a
-permanent automated regression test appears appropriate, report that
-opportunity rather than silently adding it.
+Do not add permanent test infrastructure during a QA run. If a permanent
+automated regression test would be valuable, recommend it instead.
 
 ## Verify Effects Beyond the UI
 
-When a UI action is expected to cause a backend, device, configuration, or
-system change, verify both sides when practical.
+When a UI action should change backend, device, configuration, or system
+state, verify both sides when practical:
 
-For example:
+    UI action → UI indicates success → API/network behavior
+      → server/device/system state → UI reflects resulting state
 
-    UI action
-        ↓
-    UI indicates success
-        ↓
-    Verify API/network behavior
-        ↓
-    Verify server/device/system state
-        ↓
-    Verify UI reflects resulting state
-
-A success notification alone is not sufficient evidence that the underlying
-operation succeeded.
-
-Use SSH, logs, APIs, device state, or other available mechanisms to verify
-the resulting system behavior when relevant.
+A success notification alone is not evidence the operation succeeded. Use
+SSH, logs, APIs, device state, or other available mechanisms.
 
 ## Test Both Positive and Negative Paths
 
-For changed functionality, test the normal successful workflow and relevant
-failure or boundary behavior.
-
-Examples include:
-
-- Valid input.
-- Invalid input.
-- Empty input.
-- Minimum/maximum values.
-- Repeated submission.
-- Cancel behavior.
-- Refresh during or after an operation.
-- Navigation away and back.
-- Failed backend requests when reasonably reproducible.
-- Disconnected/unavailable devices when relevant.
-
-Only test scenarios that are relevant to the change and can be performed
-safely.
+Test the successful workflow and the relevant failure and boundary
+behavior: valid, invalid, and empty input; minimum and maximum values;
+repeated submission; cancellation; refresh during or after an operation;
+navigating away and back; failed backend requests when reasonably
+reproducible; and disconnected or unavailable devices when relevant. Only
+test scenarios relevant to the change that can be performed safely.
 
 ## Preserve the Test Environment
 
-Before modifying existing configuration or data through the UI, record the
-original state when practical.
-
-After testing, restore configuration or data that was changed solely for QA,
-unless the test specifically requires the resulting state to remain.
-
-Do not delete or destructively modify unrelated user, project, device, or
-system data.
-
-Test-created temporary data should be cleaned up when practical.
+Record the original state before changing existing configuration or data,
+and restore anything changed solely for QA unless the test requires the
+result to remain. Clean up test-created data when practical. Never delete or
+destructively modify unrelated user, project, device, or system data.
 
 ## Evidence
 
-For each acceptance criterion, record the meaningful interactions performed
-and observed result.
+For each criterion, record the interactions performed and the observed
+result. For failures, capture the exact workflow, visible error, console
+errors, failed network requests, a screenshot when supported, relevant
+server/application logs, and the resulting system state.
 
-When a failure occurs, capture useful evidence such as:
-
-- Exact workflow performed.
-- Visible error.
-- Browser console error.
-- Failed network request.
-- Relevant screenshot when supported.
-- Relevant server/application logs.
-- Resulting system state.
-
-The QA report should describe what was actually exercised rather than simply
-stating that the feature was "tested."
+Report what was actually exercised, never just that something was "tested."
 
 ---
 
 # Phase 12 — System Testing
 
-Use SSH when necessary to validate system behavior.
-
-Depending on the ticket, inspect:
-
-- Running services.
-- Process state.
-- Logs.
-- Configuration.
-- Network connectivity.
-- Device communication.
-- File state.
-- Database/service state.
-- Resource usage.
-- Restart behavior.
-- Persistence across reboot.
+Use SSH to validate system behavior as the ticket requires: running services
+and process state, logs, configuration, network connectivity, device
+communication, file and database/service state, resource usage, restart
+behavior, and persistence across reboot.
 
 For backend/API changes, exercise the affected endpoint or service directly
-when practical: verify successful responses, relevant error responses,
-payloads, and authentication/authorization behavior where applicable.
+when practical: successful and error responses, payloads, and
+authentication/authorization.
 
-Prefer observable behavior over assumptions based solely on implementation.
+Prefer observable behavior over assumptions from the implementation.
 
 ---
 
 # Phase 13 — Regression Testing
 
-Use the GitLab diff and Jira requirements to determine what existing
-functionality could plausibly be affected.
+Regression testing is risk-based, not an arbitrary full-system test. From
+the diff and the Jira requirements, trace:
 
-Regression testing should be risk-based rather than an arbitrary full-system
-test.
+    Changed component → dependencies/consumers → existing behaviors
+      → regression tests
 
-Identify:
+Focus on callers of changed functions; shared modules and components;
+existing workflows through changed code; APIs, contracts, and schemas; state
+management; device communication; authentication/authorization;
+persistence; configuration; startup/shutdown; async behavior and retries;
+reconnection; error handling; and features adjacent to the ticket.
 
-    Changed component
-          ↓
-    Dependencies / consumers
-          ↓
-    Existing behaviors
-          ↓
-    Regression tests
+Exercise user-facing regression areas interactively, as in Phase 11. Test
+existing behavior both inside and immediately outside the ticket's path.
 
-Pay particular attention to:
-
-- Callers of changed functions.
-- Shared modules and components.
-- Existing workflows using changed code.
-- APIs whose behavior or contracts changed.
-- Schemas.
-- State management.
-- Device communication.
-- Authentication/authorization.
-- Persistence.
-- Configuration.
-- Startup/shutdown behavior.
-- Asynchronous behavior and retries.
-- Reconnection behavior.
-- Error handling.
-- Features adjacent to the ticket's functionality.
-
-Exercise user-facing regression areas interactively in the browser, as in
-Phase 11.
-
-Test important existing behavior both inside and immediately outside the
-ticket's intended path.
-
-Do not report "no regressions" merely because the ticket's acceptance
-criteria pass.
+Passing acceptance criteria is not evidence of "no regressions."
 
 ---
 
 # Phase 14 — Investigate Failures
 
-For every failure:
+For every failure: reproduce it, determine whether it is repeatable and what
+triggers it, check whether it pre-dates the ticket when practical, collect
+evidence from the browser, console, network, application and service logs,
+system state, the GitLab diff, and Jira, and identify the likely responsible
+code when the evidence supports it.
 
-1. Reproduce it if possible.
-2. Determine whether it is repeatable and the conditions required to trigger
-   it.
-3. Determine whether it existed before the ticket when practical.
-4. Collect evidence.
-5. Identify the likely responsible code when supported by evidence.
+Classify it as one of: product defect or acceptance-criteria failure,
+regression, environment problem, installation/deployment problem, test
+problem, ambiguous requirement, or pre-existing behavior.
 
-Distinguish among:
-
-1. Product defect / acceptance-criteria failure.
-2. Regression.
-3. Environment problem.
-4. Installation/deployment problem.
-5. Test problem.
-6. Ambiguous requirement.
-7. Pre-existing behavior.
-
-Use:
-
-- Browser behavior.
-- Browser console.
-- Network requests.
-- Application logs.
-- Service logs.
-- System state.
-- GitLab changes.
-- Jira requirements.
-
-Do not declare a defect solely because code looks suspicious.
-
-Do not present speculation as fact.
-
-Do not modify production/application code merely to make QA pass unless the
-user has explicitly asked this workflow to fix discovered defects.
-
-The primary purpose of this skill is to test and report.
+Do not declare a defect because code looks suspicious, and do not present
+speculation as fact. Do not modify application code to make QA pass unless
+the user explicitly asked this workflow to fix defects.
 
 ---
 
 # Phase 15 — Retesting
 
-When a failure is resolved during the QA session:
-
-1. Repeat the failing test.
-2. Repeat closely related tests.
-3. Repeat relevant regression tests.
-
-Do not mark an issue resolved solely because the immediate error disappeared.
+When a failure is resolved during the session, repeat the failing test, the
+closely related tests, and the relevant regression tests. A disappeared
+error alone does not mean the issue is resolved.
 
 ---
 
 # Phase 16 — Update Jira
 
-Post one comprehensive QA report to the Jira ticket using the Jira MCP.
-
-Do not transition the ticket's status unless the user or project
-instructions explicitly require it.
-
-Do not post speculative findings as confirmed defects.
-
-Use this structure:
+Post one comprehensive QA report to the Jira ticket using the Jira MCP. Do
+not transition the ticket's status unless the user or project instructions
+require it. Do not post speculative findings as confirmed defects.
 
     ## QA Results
 
@@ -739,6 +401,7 @@ Use this structure:
     Server:
 
     ### Acceptance Criteria
+    (Note if the criteria were QA-derived.)
 
     [PASS] <criterion>
     Interactions performed:
@@ -790,64 +453,44 @@ Use this structure:
     Requirements: <passed>/<total>
     Regression checks: <passed>/<total>
 
-Summarize large logs rather than pasting them verbatim.
-
-Never hide testing limitations such as unavailable hardware, inaccessible
-environment, missing credentials, unavailable external dependencies,
-ambiguous acceptance criteria, or missing test data.
+Summarize large logs rather than pasting them. State every testing
+limitation — unavailable hardware, inaccessible environment, missing
+credentials, unavailable dependencies, ambiguous criteria, missing test
+data.
 
 ## Optional GitLab Update
 
-If requested by the user, post relevant QA findings to the GitLab merge
-request.
-
-Keep GitLab comments focused on implementation-specific findings.
-
-Use Jira for the broader QA record.
+If the user asks, post implementation-specific findings to the MR. Jira
+remains the broader QA record.
 
 ---
 
 # Phase 17 — Return the Result to the User
 
-After updating Jira, provide the user with a concise summary containing:
-
-- Ticket and MR.
-- Build/artifact tested and server.
-- Overall QA result.
-- Acceptance criteria result.
-- Regression result.
-- Deficiencies found.
-- Anything blocked or not tested.
-- Confirmation that the Jira ticket was updated.
-
-The Jira writeup is the authoritative detailed report.
+After updating Jira, give the user a concise summary: ticket and MR, build
+and server tested, overall result, acceptance-criteria and regression
+results, deficiencies found, anything blocked or untested, and confirmation
+that Jira was updated. The Jira report is the authoritative detailed record.
 
 ---
 
 ## Result Definitions
 
-**PASS**
-All acceptance criteria were verified successfully and no material
-regressions or deficiencies were found.
+**PASS** — All acceptance criteria verified; no material regressions or
+deficiencies found.
 
-**PASS WITH NOTES**
-Acceptance criteria pass, but there are minor observations, limitations, or
-unrelated issues worth documenting.
+**PASS WITH NOTES** — Acceptance criteria pass, with minor observations,
+limitations, or unrelated issues worth documenting.
 
-**FAIL**
-At least one acceptance criterion fails or a regression attributable to the
-implementation was found.
+**FAIL** — At least one acceptance criterion fails, or a regression
+attributable to the implementation was found.
 
-**BLOCKED**
-Meaningful QA cannot be completed because required infrastructure, hardware,
-credentials, build artifacts, requirements, or other dependencies are
-unavailable.
+**BLOCKED** — Meaningful QA cannot be completed because required
+infrastructure, hardware, credentials, artifacts, requirements, or other
+dependencies are unavailable.
 
-Do not report PASS if a required acceptance criterion failed.
-
-Do not report PASS if required testing was blocked.
-
-Clearly distinguish untested behavior from passing behavior.
+Never report PASS if a required criterion failed or required testing was
+blocked. Always distinguish untested behavior from passing behavior.
 
 ---
 
@@ -855,25 +498,20 @@ Clearly distinguish untested behavior from passing behavior.
 
 Never:
 
-- Install an unverified artifact.
-- Install on an unidentified SSH host.
-- Reboot a host that has not been verified as the intended test server.
+- Install an unverified artifact, or install on an unidentified SSH host.
+- Reboot a host not verified as the intended test server.
 - Test an old MR artifact while reporting it as the latest.
-- Assume a successful pipeline means the feature works.
-- Assume successful installation means the feature works.
-- Assume a rendered UI or success notification means the feature works.
-- Invent Jira requirements.
-- Invent test results.
-- Report untested behavior as passing.
-- Hide failures by modifying the test procedure.
-- Modify implementation code, weaken tests, or alter acceptance criteria to
-  make QA pass.
+- Treat a successful pipeline, installation, rendered UI, or success
+  notification as proof the feature works.
+- Invent Jira requirements or test results, or report untested behavior as
+  passing.
+- Hide failures by changing the test procedure, modifying implementation
+  code, weakening tests, or altering acceptance criteria.
 - Delete or destructively modify unrelated user, project, device, or system
   data.
 - Omit failures from the Jira report.
-- Use production systems for this workflow unless the user explicitly
-  identifies them as the intended environment.
+- Use production systems unless the user explicitly names them as the
+  intended environment.
 
-The default deployment target for this skill is the dedicated test server:
-
-    savis-101627.local
+The default deployment target is the dedicated test server
+`savis-101627.local`.

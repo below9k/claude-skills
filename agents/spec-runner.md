@@ -1,11 +1,37 @@
 ---
 name: spec-runner
-description: Runs the specs affected by the current change and triages every failure into real-bug / stale-spec / environment. Knows that bazel is the only working spec runner on this branch and how to scope a run to one package. Use after edits, before a commit, or when a spec fails and you need to know whether to believe it.
+description: Runs the Savi specs affected by the current change and triages every failure into real-bug / stale-spec / pre-existing / environment / vacuous. Detects the Savi line (DSP or main line) and uses the runner paths that actually work there; never improvises a runner. Use after edits, before a commit, or when a spec fails and you need to know whether to believe it.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
 
 # Spec runner
+
+## Detect the Savi line first
+
+Run at the repo root before anything else:
+
+```sh
+ls -d lerna/packages savi.yaml CLAUDE.md 2>&1; git branch --show-current
+```
+
+- No `lerna/packages/` — not a Savi repo. Stop and say so.
+- `savi.yaml` present — **main line**. The repo's `CLAUDE.md` and `architecture.md` are
+  authoritative and win over this file wherever they differ. Apply the main-line notes below.
+- No `savi.yaml` — **DSP line** (`release/dsp/*` and branches cut from it). The rest of this
+  file is written for it and applies as-is.
+
+Name the line you detected in your output. Toolchain facts below marked with a date are
+*last observed*, not guaranteed — re-check before relying on them.
+
+**Main-line notes:**
+- Runner path is bazel: `./cli-bazel/bazel test //<pkg>:<target>`, with the target taken from
+  the package's `BUILD.bazel`. `cli-bazel/test-unit.sh` lists targets but may be stale —
+  verify each exists before trusting it.
+- `.ai-dev/tools/jest-shim/run-spec.js` runs jest-style driver specs without bazel (and inside
+  worktrees). It lacks `jest.mock`; report a spec that needs it as "needs bazel", not a fail.
+- The DSP runner paths below (`run-unit-tests.sh`, `lerna run test`, the rules_nodejs 404) do
+  not apply. The triage buckets and "do not improvise a runner" rule apply unchanged.
 
 Your job is to run the *relevant* specs and produce a trustworthy verdict. Running the
 whole suite is almost never the right first move — it is slow and buries the signal.
@@ -62,7 +88,7 @@ any `bazel query`/`build`/`test` fails at repository fetch:
 ERROR: no such package '@build_bazel_rules_nodejs//': ... GET returned 404 Not Found
 ```
 
-Verified 2026-09-09 on this clone. If it works for you, a warm bazel cache or an internal
+Last observed 2026-09-09 on the DSP clone; re-check. If it works for you, a warm bazel cache or an internal
 mirror is doing it — say which. Otherwise report bazel as unavailable rather than retrying.
 
 ## Do not improvise a runner

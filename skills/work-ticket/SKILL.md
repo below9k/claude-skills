@@ -1,17 +1,32 @@
 ---
-
 name: work-ticket
 description: Implement an engineering ticket such as SN-#### from start to finish. Use when asked to work, implement, fix, develop, or complete a Jira ticket. Retrieves the ticket, reads repository Claude instructions, identifies the associated code and branch, implements the requested behavior, verifies it, iterates on failures, and reports completion.
-context: fork
-agent: work-ticket
 effort: high
-------------
+---
 
 # Work Ticket
 
 Work the engineering ticket identified in:
 
 $ARGUMENTS
+
+## Savi repositories: delegate to the specialist agents
+
+In a Savi repository (`lerna/packages/` at the root), use the Savi subagents at the steps
+below. They detect the DSP vs main line themselves. Give each one the ticket key, the base
+branch, and the specific files or interfaces in question; relay what matters from their
+reports rather than re-deriving it.
+
+| Step | Agent | When |
+| --- | --- | --- |
+| 5. Plan | `slice-planner` | Non-trivial tickets, before implementing |
+| 4–6. Before editing | `impact-tracer` | Changing a shared interface, IoC key, service, or process registration |
+| 7. Tests | `spec-author` | New behavior or a bug fix needs a spec (and a red-before-fix check) |
+| 8, 13. Validation | `spec-runner` | After meaningful edits, and in final validation |
+| 13. Review | `savi-invariant-reviewer` + `async-bug-hunter`, in parallel | Final validation, on the complete diff |
+| 10. Runtime | `sled-e2e` | When wiring (hemera topics, IoC order, pm2 startup) is in question |
+
+Outside Savi repositories, do these steps yourself.
 
 ## Objective
 
@@ -44,7 +59,6 @@ Read:
 * attachments
 * comments
 * linked tickets
-* attachments
 * related work
 * current status
 * referenced branches, commits, MRs, or PRs
@@ -107,7 +121,12 @@ Before making changes:
 
 Never overwrite or discard unrelated user changes.
 
-If the repository's documented workflow requires a ticket branch, follow it.
+If the repository's documented workflow requires a ticket branch, follow it. For GitLab
+repositories (`~/develop/savi*`), use the `gitlab-push` skill's base-branch detection and
+branch naming (`PRJ-####/PRJ-###-<kebab-case-description>`, cut from the detected
+`release/v#.#.#` or `release/<project>/v#.#.#` branch).
+
+Do not commit or push unless the user asks. When they do, use the `gitlab-push` skill.
 
 If an existing branch or MR/PR represents the ticket, continue from that work rather than creating a parallel implementation unless repository instructions say otherwise.
 

@@ -9,7 +9,7 @@ description: >
   that the implementation satisfies the stated requirements. For GitLab repositories,
   determine the intended release/base branch before reviewing. GitLab
   feature branches typically originate from release/v#.#.# or
-  release/prj/v#.#.# branches, and reviews should compare the feature
+  release/<project>/v#.#.# branches, and reviews should compare the feature
   branch against that base branch rather than automatically comparing
   against main, master, or develop. Review the actual diff and relevant
   surrounding code, not just the changed lines. Every review also runs
@@ -158,12 +158,12 @@ Determine the feature branch's intended base branch.
 Common release branch patterns:
 
     release/v#.#.#
-    release/PRJ/v#.#.#
+    release/<project>/v#.#.#
 
 Examples:
 
     release/v3.2.1
-    release/PRJ/v3.2.1
+    release/dsp/v1.1.3
 
 The review should normally compare:
 
@@ -533,6 +533,22 @@ regressions introduced by the fixes.
 
 ---
 
+## Savi Specialist Reviewers
+
+In a Savi repository (`lerna/packages/` at the root), also start these two subagents in
+parallel with Codex round 1, each given the same diff command and base branch:
+
+- `savi-invariant-reviewer` — service-mesh house rules (transport, data access,
+  `dependsOn`, process registration).
+- `async-bug-hunter` — promise lifetime, timer leaks, reconnect, retry, and partial-failure
+  bugs.
+
+Both detect the DSP vs main line themselves. Reconcile their findings exactly like Codex
+findings (verify, then accept, reject with evidence, or mark uncertain), and include
+accepted ones in the Codex round 2 challenge list.
+
+---
+
 ## Final Review Summary
 
 End the review with:
@@ -546,6 +562,7 @@ End the review with:
     - Medium: #
     - Low: #
 
+    Savi reviewers: <run | not a Savi repo | failed, because ...>
     Adversarial review (Codex): <rounds run, or why it was not run>
     - Codex findings accepted: #
     - Codex findings rejected: #
@@ -553,7 +570,8 @@ End the review with:
 
     Overall assessment: <summary>
 
-Tag each finding with its source: `(Claude)`, `(Codex)`, or `(both)`.
+Tag each finding with its source: `(Claude)`, `(Codex)`, `(invariant-reviewer)`,
+`(async-bug-hunter)`, or a combination when more than one found it.
 List disputed items after the findings, each with both positions. Briefly
 list rejected Codex findings with the one-line reason for rejection, so
 the reader can check the reasoning.
