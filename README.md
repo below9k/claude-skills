@@ -18,7 +18,7 @@ and global settings. This repo is checked out directly as `~/.claude`.
 | `gitlab-code-review` | Review a branch/commit against its release base branch and Jira acceptance criteria, with an adversarial Codex pass |
 | `gitlab-push` | Commit, push to the user's fork, and open GitLab MRs against the detected release branch |
 | `work-ticket` | Implement a Jira ticket end to end |
-| `qa-ticket` | QA a Jira ticket against its acceptance criteria and regression areas |
+| `qa-ticket` | Deploy the MR/RC artifact to the test server and QA a ticket with live interactive browser testing, system checks, and regression testing |
 | `qa-acceptance-criteria` | Derive missing, testable acceptance criteria from a ticket and its MR/PR |
 
 ### Agents
