@@ -20,15 +20,22 @@ and global settings. This repo is checked out directly as `~/.claude`.
 | `work-ticket` | Implement a Jira ticket end to end; runs inline so it can delegate to the Savi agents |
 | `qa-ticket` | Deploy the MR/RC artifact to the test server and QA a ticket with live interactive browser testing, system checks, and regression testing |
 | `qa-acceptance-criteria` | Derive missing, testable acceptance criteria from a ticket and its MR/PR |
+| `iot-ticket-write` | FarmBot `iot`: draft, rewrite or critique MFB tickets against the team ticket standard (`skills/iot-ticket-write/ticket-standard.md`), iterating with the user |
+| `iot-backlog-sync` | FarmBot `iot`: publish approved drafts to Jira, add real blocking links, and drift-check a design doc against its epic |
+| `iot-work-ticket` | FarmBot `iot`: implement a ticket — readiness check, stacked base, spec-first, `vp` gates, Codex pass, PR via the repo template |
+| `iot-ticket-closeout` | FarmBot `iot`: verify AC against the PR, post the closeout comment, and carry review findings into downstream tickets |
 
 ### Agents
 
 `slice-planner`, `impact-tracer`, `savi-invariant-reviewer`, `async-bug-hunter`, `spec-runner`,
-`spec-author`, `sled-e2e`, `qa-ticket`, `qa-acceptance-criteria`.
+`spec-author`, `sled-e2e`, `qa-ticket`, `qa-acceptance-criteria`, `ticket-critic`,
+`legacy-source-scout`, `pr-stack-planner`.
 
 The first seven are Savi-specific and branch-aware: each detects whether it is in a DSP-line or
 main-line checkout (via `savi.yaml`) and applies that line's rules, and stops outside a Savi
-repo. `qa-ticket` and `qa-acceptance-criteria` back the forked skills of the same name. See
+repo. `qa-ticket` and `qa-acceptance-criteria` back the forked skills of the same name.
+`ticket-critic`, `legacy-source-scout` and `pr-stack-planner` serve the FarmBot `iot-*`
+skills. See
 [`agents/README.md`](agents/README.md) for when to use each and how they compose.
 
 ## What is not tracked

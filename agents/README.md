@@ -96,3 +96,32 @@ missing chai matchers passes *vacuously*, and a false green here is worse than n
 If you want a fast local loop, the main-line checkout solves it with
 `.ai-dev/tools/jest-shim/`, but that shim provides jest globals and these specs are chai —
 it would need a chai-shaped equivalent. Ask if you want one built.
+
+---
+
+# FarmBot `iot` agents
+
+These serve the `iot-*` skills for FarmBot's `iot` monorepo (GitHub
+`farmbot-monitoring-solutions/iot`, Jira project `MFB`). They grew out of the DPS rewrite
+epic (MFB-1587). All three are read-only.
+
+| Agent | Use it when |
+| --- | --- |
+| `ticket-critic` | Before publishing a draft, before starting a ticket, or to audit an epic. Checks against `skills/iot-ticket-write/ticket-standard.md` and returns blockers, fixes and questions. |
+| `legacy-source-scout` | Writing or implementing rewrite tickets. Verifies numbers and behaviours against the legacy repo (e.g. `~/Develop/m3s`) with `file:line`, and lists cases the doc omits. |
+| `pr-stack-planner` | Choosing a base when blockers are still in review, or after a PR in a stack merges. Prints restack commands; never runs them. |
+
+## How they compose with the skills
+
+```
+design doc ──iot-ticket-write──▶ drafts ◀── ticket-critic + legacy-source-scout
+                 │  (iterate with the user; corrections update ticket-standard.md)
+                 ▼
+          iot-backlog-sync ──▶ Jira (bodies, blocking links, labels)   ◀── drift mode
+                 ▼
+          iot-work-ticket ── ticket-critic (readiness) + pr-stack-planner (base)
+                 │            legacy-source-scout (parity specs) → vp gates → Codex → PR
+                 ▼
+          iot-ticket-closeout ──▶ "Verified in the PR" comment + ticks
+                                  + carry-forward into downstream tickets
+```
