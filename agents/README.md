@@ -1,15 +1,21 @@
-# Savi subagents
-
-These agents are Savi-specific and branch-aware. Each one first detects which Savi line it is in:
-`savi.yaml` at the repo root means the **main line** (the repo's `CLAUDE.md` / `architecture.md`
-win), and its absence means the **DSP line** (`release/dsp/*`), whose rules are inlined into the
-agents. Outside a Savi repo (no `lerna/packages/`) they stop and say so.
+# Subagents
 
 Agent definitions for the Claude Code `Agent` tool. Each file is one agent; the frontmatter
 `description` is what the model matches against when deciding to delegate, so it is written
 to say *when to use it*, not just what it is.
 
 Invoke by name, e.g. "use impact-tracer on the driver-command-router interface".
+
+The agents fall into two groups: [Savi agents](#savi-agents) and
+[FarmBot `iot` agents](#farmbot-iot-agents). `qa-ticket`, `qa-acceptance-criteria`, and
+`rc-regression` back the forked skills of the same name; see those skills for details.
+
+# Savi agents
+
+These agents are Savi-specific and branch-aware. Each one first detects which Savi line it is in:
+`savi.yaml` at the repo root means the **main line** (the repo's `CLAUDE.md` / `architecture.md`
+win), and its absence means the **DSP line** (`release/dsp/*`), whose rules are inlined into the
+agents. Outside a Savi repo (no `lerna/packages/`) they stop and say so.
 
 | Agent | Use it when |
 | --- | --- |

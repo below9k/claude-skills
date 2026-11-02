@@ -21,6 +21,11 @@ and global settings. This repo is checked out directly as `~/.claude`.
 | `qa-ticket` | Deploy the MR/RC artifact to the test server and QA a ticket with live interactive browser testing, system checks, and regression testing |
 | `qa-acceptance-criteria` | Derive missing, testable acceptance criteria from a ticket and its MR/PR |
 | `rc-regression` | Regression-test a Savi release candidate (e.g. `release/v3.5.8-rc1`) by ticket or as a general regression, on a deployed build, with simulations/harnesses reported for future automation |
+| `review-follow-up` | Address review feedback on an existing MR: verify and triage each thread, fix, re-validate, push, and draft replies for approval |
+| `standup` | Build a standup from actual Jira and GitLab activity since the previous workday |
+| `mergeback` | Merge an older Savi release forward (or into develop) as a mechanical merge plus one adaptations commit, then open the MR |
+| `cut-release-branch` | Create the next Savi release branch (hotfix, rc, alpha, beta, point) and bump `RELEASE_VER` / `DRIVERS_RELEASE_VER` |
+| `finalize-release` | Walk the Savi release finalization checklist: mergebacks, next branch, MR sweep, fixVersion cleanup, release notes, tag, Jira release |
 | `iot-ticket-write` | FarmBot `iot`: draft, rewrite or critique MFB tickets against the team ticket standard (`skills/iot-ticket-write/ticket-standard.md`), iterating with the user |
 | `iot-backlog-sync` | FarmBot `iot`: publish approved drafts to Jira, add real blocking links, and drift-check a design doc against its epic |
 | `iot-work-ticket` | FarmBot `iot`: implement a ticket — readiness check, stacked base, spec-first, `vp` gates, Codex pass, PR via the repo template |
@@ -29,13 +34,15 @@ and global settings. This repo is checked out directly as `~/.claude`.
 ### Agents
 
 `slice-planner`, `impact-tracer`, `savi-invariant-reviewer`, `async-bug-hunter`, `spec-runner`,
-`spec-author`, `sled-e2e`, `qa-ticket`, `qa-acceptance-criteria`, `rc-regression`,
-`ticket-critic`, `legacy-source-scout`, `pr-stack-planner`.
+`spec-author`, `sled-e2e`, `mergeback-auditor`, `release-ticket-triage`, `qa-ticket`,
+`qa-acceptance-criteria`, `rc-regression`, `ticket-critic`, `legacy-source-scout`,
+`pr-stack-planner`.
 
 The first seven are Savi-specific and branch-aware: each detects whether it is in a DSP-line or
 main-line checkout (via `savi.yaml`) and applies that line's rules, and stops outside a Savi
 repo. `qa-ticket`, `qa-acceptance-criteria`, and `rc-regression` back the forked skills of the
-same name. `ticket-critic`, `legacy-source-scout` and `pr-stack-planner` serve the FarmBot
+same name. `mergeback-auditor` and `release-ticket-triage` are read-only helpers for the Savi
+release skills. `ticket-critic`, `legacy-source-scout` and `pr-stack-planner` serve the FarmBot
 `iot-*` skills. See
 [`agents/README.md`](agents/README.md) for when to use each and how they compose.
 
