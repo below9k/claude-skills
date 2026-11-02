@@ -20,6 +20,12 @@ Invoke by name, e.g. "use impact-tracer on the driver-command-router interface".
 | `spec-runner` | After edits, before a commit. Runs the affected `:unit_test` targets and triages every failure. |
 | `spec-author` | When a change lands untested, or a bug needs a regression spec pinned. Writes mocha/chai specs. |
 | `sled-e2e` | When a change needs proving on a running dev sled. Asks before touching pm2. |
+| `mergeback-auditor` | Before pushing a mergeback, or reviewing someone's mergeback MR. Checks two-commit discipline, dropped source changes, and migration ordering. Read-only. |
+| `release-ticket-triage` | While finalizing a release. Proposes merge/retarget for open MRs, fixVersion cleanup, and release-notes title/`Internal` fixes. Read-only. |
+
+Release workflow skills (in `~/.claude/skills/`): `mergeback`, `cut-release-branch`, and
+`finalize-release`, which orchestrates the other two and both agents above. Source: Confluence
+*Finalizing a release* (`/wiki/x/wJkiag`).
 
 ## How they compose
 
