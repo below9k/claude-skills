@@ -78,6 +78,21 @@ Regression testing is risk-based: trace the diff to callers, shared modules,
 state, persistence, configuration, startup/shutdown, reconnect, and adjacent
 features, and exercise those behaviors.
 
+## Simulations and harnesses
+
+When a behavior cannot be exercised with the hardware or network available,
+build what is needed: simulated devices, capture servers, extra IPs, fake
+endpoints, or fault injection. Follow the skill's **Test Harnesses and
+Simulations** rules:
+- reuse the fakes that already exist in the repo first
+- keep harness code outside any checkout
+- never take over an IP address that is in use
+- restore and tear down afterwards
+- label any result that depends on a simulation
+
+Report each harness using the skill's Harness Report format, so it can
+become an automated test later.
+
 ## Defect investigation
 
 For every failure: reproduce it, determine the conditions and whether it

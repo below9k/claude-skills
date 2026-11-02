@@ -20,15 +20,16 @@ and global settings. This repo is checked out directly as `~/.claude`.
 | `work-ticket` | Implement a Jira ticket end to end; runs inline so it can delegate to the Savi agents |
 | `qa-ticket` | Deploy the MR/RC artifact to the test server and QA a ticket with live interactive browser testing, system checks, and regression testing |
 | `qa-acceptance-criteria` | Derive missing, testable acceptance criteria from a ticket and its MR/PR |
+| `rc-regression` | Regression-test a Savi release candidate (e.g. `release/v3.5.8-rc1`) by ticket or as a general regression, on a deployed build, with simulations/harnesses reported for future automation |
 
 ### Agents
 
 `slice-planner`, `impact-tracer`, `savi-invariant-reviewer`, `async-bug-hunter`, `spec-runner`,
-`spec-author`, `sled-e2e`, `qa-ticket`, `qa-acceptance-criteria`.
+`spec-author`, `sled-e2e`, `qa-ticket`, `qa-acceptance-criteria`, `rc-regression`.
 
 The first seven are Savi-specific and branch-aware: each detects whether it is in a DSP-line or
 main-line checkout (via `savi.yaml`) and applies that line's rules, and stops outside a Savi
-repo. `qa-ticket` and `qa-acceptance-criteria` back the forked skills of the same name. See
+repo. `qa-ticket`, `qa-acceptance-criteria`, and `rc-regression` back the forked skills of the same name. See
 [`agents/README.md`](agents/README.md) for when to use each and how they compose.
 
 ## What is not tracked
