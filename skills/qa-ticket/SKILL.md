@@ -52,7 +52,7 @@ artifacts, or requirements.
 
 ## Default Test Server
 
-    savis-101627.local            (SSH)
+    savis-101627.local            (SSH, user `savi`)
     http://savis-101627.local/    (web UI)
 
 If the user specifies another test server, use it instead.
@@ -332,6 +332,64 @@ Prefer observable behavior over assumptions from the implementation.
 
 ---
 
+# Test Harnesses and Simulations
+
+When a criterion or regression check cannot be exercised with the hardware,
+devices, or network available, build what is needed to exercise it rather
+than marking it BLOCKED. Examples:
+
+- Simulated devices that speak a driver's protocol (TCP/UDP/HTTP/serial
+  over TCP), including status feedback and reconnect behavior.
+- Additional IP addresses so several simulated devices can coexist.
+- HTTP/TCP/UDP servers that capture and log what the sled sends out
+  (webhooks, device commands, cloud calls).
+- Fake third-party or cloud endpoints returning scripted responses.
+- Scripted mesh clients using the same `interfaceFactory` the services use.
+- Fault injection: dropped connections, slow responses, error codes,
+  malformed payloads.
+
+Rules:
+
+1. **Reuse first.** Search the repo for existing fakes before writing one,
+   e.g. `lerna/packages/webos3-simulator`, `driver-*/test-tools/` (such as
+   `fake-everpass`), `core/interface-factory-mock`, `core/utils/mock`, and
+   `webos3-app/src/libs/fake_scap`. Extend an existing fake rather than
+   duplicating it.
+2. **Keep it out of the repo.** Put harness code in a run directory outside
+   any checkout, e.g. `~/qa-harness/<ticket-or-rc>/harness/`. Never commit it,
+   and never leave it inside a Savi checkout.
+3. **Network safety.** Before adding an IP alias, confirm the address is
+   unused (no ping or ARP reply) and prefer addresses on the local machine or
+   the test server. Never impersonate a real device's IP or MAC on a shared
+   network, and never bind to ports that real services on that host use.
+4. **Point, then restore.** When the sled must be reconfigured to talk to a
+   simulation (e.g. a device's IP changed to the fake), record the original
+   configuration and restore it afterwards.
+5. **Tear down.** Stop every process, remove every IP alias, and delete
+   temporary configuration you added. List anything deliberately left
+   running.
+6. **Label results.** A result that depended on a simulation is marked
+   *simulated*. A pass against a simulated device is weaker evidence than a
+   pass against real hardware, so say what the simulation does not model.
+
+## Harness Report
+
+Report every harness or simulation built or reused, so it can be turned into
+future automated tests:
+
+    ### <harness name>
+    Path: <run-dir path to source>
+    Simulates: <device/service/network condition, protocol, port>
+    Used for: <criteria/regression checks it enabled>
+    How to run: <command(s)>
+    Fidelity: <what it models faithfully>
+    Gaps: <what it does not model; where results may differ from real hardware>
+    Automation candidate: <suggested home, e.g. alongside an existing
+      test-tools fake or as a spec fixture, and the tests it would enable>
+    Torn down: yes | left running, because ...
+
+---
+
 # Phase 13 — Regression Testing
 
 Regression testing is risk-based, not an arbitrary full-system test. From
@@ -440,6 +498,10 @@ require it. Do not post speculative findings as confirmed defects.
     If none were found:
     "No deficiencies were identified during this QA pass."
 
+    ### Simulations and Harnesses
+
+    (Harness Report entries, or "None used.")
+
     ### Coverage
 
     Tested:
@@ -469,7 +531,8 @@ remains the broader QA record.
 
 After updating Jira, give the user a concise summary: ticket and MR, build
 and server tested, overall result, acceptance-criteria and regression
-results, deficiencies found, anything blocked or untested, and confirmation
+results, deficiencies found, anything blocked or untested, harnesses or
+simulations built (with paths), and confirmation
 that Jira was updated. The Jira report is the authoritative detailed record.
 
 ---
@@ -514,4 +577,4 @@ Never:
   intended environment.
 
 The default deployment target is the dedicated test server
-`savis-101627.local`.
+`savis-101627.local` with user `savi`.
