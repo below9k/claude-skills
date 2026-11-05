@@ -1,6 +1,6 @@
 ---
 name: work-ticket
-description: Implement an engineering ticket (e.g. SN-1234, MFB-1607) from start to finish in any repo. Use when asked to work, implement, fix, develop, pick up, or complete a Jira ticket. Loads the repo profile, checks the ticket is ready, picks the base branch (including stacked PRs), writes down an end-to-end tracer bullet (golden path) before editing, writes tests from the acceptance criteria, implements along the path, runs the repo's gates, self-reviews every boundary, runs the specialist reviewers and an adversarial Codex pass, and hands off to ticket-closeout. Runs inline so it can delegate to agents. For addressing review comments on an existing MR/PR, use review-follow-up instead.
+description: Implement an engineering ticket (e.g. PRJ-1234) from start to finish in any repo. Use when asked to work, implement, fix, develop, pick up, or complete a Jira ticket. Loads the repo profile, checks the ticket is ready, picks the base branch (including stacked PRs), writes down an end-to-end tracer bullet (golden path) before editing, writes tests from the acceptance criteria, implements along the path, runs the repo's gates, self-reviews every boundary, runs the specialist reviewers and an adversarial Codex pass, and hands off to ticket-closeout. Runs inline so it can delegate to agents. For addressing review comments on an existing MR/PR, use review-follow-up instead.
 effort: high
 ---
 

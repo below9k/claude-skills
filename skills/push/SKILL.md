@@ -92,7 +92,7 @@ you didn't.
 ## 5. Commit
 
 - Use the repo's style (the profile's **Commits and PRs**: e.g. ticket-prefixed
-  `SN-567 Fix audio subscription cleanup`, or conventional `feat(pkg): …` with no key).
+  `PRJ-567 Fix audio subscription cleanup`, or conventional `feat(pkg): …` with no key).
 - Commit under the user's configured identity (`git config user.name` / `user.email`). Don't
   change it. Some CIs trigger only for the user's own identity; the profile says when that
   is functional, not cosmetic.

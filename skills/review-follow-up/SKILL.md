@@ -1,6 +1,6 @@
 ---
 name: review-follow-up
-description: Address code review feedback on an existing merge request or pull request (GitLab or GitHub), or on a local review report, from start to finish. Use when asked to follow up on, address, respond to, or fix review comments, MR/PR threads, or reviewer feedback, e.g. "address the comments on !5002", "triage the review on #449", or "follow up on SN-6188's review". Gathers every unresolved thread, verifies each claim against the code, triages it (fix, already handled, answer, push back, carry to another ticket, out of scope), fixes the class of defect rather than only the flagged line, re-validates along the ticket's tracer bullet, pushes new commits to the same branch, and drafts thread replies for the user to approve.
+description: Address code review feedback on an existing merge request or pull request (GitLab or GitHub), or on a local review report, from start to finish. Use when asked to follow up on, address, respond to, or fix review comments, MR/PR threads, or reviewer feedback, e.g. "address the comments on !123", "triage the review on #449", or "follow up on PRJ-1234's review". Gathers every unresolved thread, verifies each claim against the code, triages it (fix, already handled, answer, push back, carry to another ticket, out of scope), fixes the class of defect rather than only the flagged line, re-validates along the ticket's tracer bullet, pushes new commits to the same branch, and drafts thread replies for the user to approve.
 effort: high
 ---
 

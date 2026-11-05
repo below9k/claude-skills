@@ -8,10 +8,8 @@ process.
 ```
 repos/
   README.md            ← this file: how to load a profile, and the section contract
-  savi/README.md       ← Savi monorepo (GitLab savicontrols/savi): profile + index
-  savi/*.md            ← topic files, read only when a skill or agent needs that topic
-  iot/README.md        ← FarmBot iot monorepo (GitHub farmbot-monitoring-solutions/iot)
-  iot/*.md
+  <name>/README.md     ← one repo's profile: match rules, core conventions, topic index
+  <name>/*.md          ← topic files, read only when a skill or agent needs that topic
 ```
 
 ## Loading the profile (every skill and agent does this first)
@@ -28,7 +26,7 @@ repos/
    scripts, CI config, `git log` conventions, remote host) and say in your output that no
    profile was found. If you learned something durable, offer to start a profile.
 
-Name the profile (and, where a profile has variants such as Savi's DSP and main lines, the
+Name the profile (and, where a profile has variants such as two product lines, the
 variant) in your output.
 
 Facts marked *observed <date>* are snapshots, not guarantees. Re-check them before relying
