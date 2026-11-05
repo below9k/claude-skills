@@ -16,7 +16,7 @@ in this conversation**. Plan first, show the plan, then write.
 
 Jira: cloud `farmbot.atlassian.net` (call `getAccessibleAtlassianResources` once for the
 cloudId), project `MFB`. Design docs live on `farmbot-au.atlassian.net`. If that site
-isn't granted to the MCP, use a local export (e.g. `~/Documents/Epic- *.md`) and say so.
+isn't granted to the MCP, use a local export of the page and say so.
 
 ## Modes
 

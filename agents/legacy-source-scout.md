@@ -12,7 +12,7 @@ report what the code does, with evidence. You don't write code or tickets.
 
 ## Inputs
 
-- The legacy repo path (default `~/Develop/m3s`, .NET 10 / C#; read its `CLAUDE.md` and
+- The legacy repo path (a local clone of `farmbot-monitoring-solutions/m3s` if you have one, else read it with `gh api`; .NET 10 / C#; read its `CLAUDE.md` and
   `docs/` first).
 - The component or ticket in question.
 - Optionally, a list of claims to verify, like "5 attempts", "backoff 4, 8, 16, 32 min" or

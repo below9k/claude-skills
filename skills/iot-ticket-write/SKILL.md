@@ -16,7 +16,7 @@ $ARGUMENTS
    satisfy it. Note which **[open]** rules you applied.
 2. `~/.claude/skills/iot-ticket-write/examples/` — before/after rewrites. Match their
    level of detail.
-3. In the `iot` repo (`~/Develop/iot`, or wherever `pnpm-workspace.yaml` names
+3. In the `iot` repo (your checkout: the directory whose `pnpm-workspace.yaml` names
    `apps/* packages/* infra/*`): `CONTEXT.md` (glossary), `docs/adr/` (normative),
    `docs/agents/triage-labels.md`, and `AGENTS.md`.
 
@@ -38,13 +38,13 @@ Work out the mode from the request. Ask only if it's genuinely ambiguous.
   too; carried-forward findings live there (standard §3.7). For an epic:
   `parent = <KEY> ORDER BY key`.
 - Design doc: try Confluence. If `farmbot-au.atlassian.net` isn't granted, look for a local
-  export (e.g. `~/Develop/*-tsd.md`) and say which version you used.
+  export of the design doc and say which version you used.
 - Open PRs that touch the area (`gh pr list -R farmbot-monitoring-solutions/iot --search
   <key>`). Their "Deferred to" and "Carried to" lines are requirements for other tickets.
 
 ### 2. Ground the claims (in parallel)
 - **`legacy-source-scout`** for rewrite tickets: give it the legacy repo path (e.g.
-  `~/Develop/m3s`), the component, and every number, state or name the draft asserts. It
+  a local clone or `gh api`), the component, and every number, state or name the draft asserts. It
   returns verified values with `file:line`, and behaviours the doc omits.
 - Check that each `Pattern:` path exists in `iot` (a plain `ls` is fine).
 

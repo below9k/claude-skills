@@ -21,7 +21,7 @@ the design doc path and the legacy repo path.
    number from it (§3.1 etc.).
 2. For Jira tickets: the body (`responseContentFormat: html`), **comments**, and links. For
    an epic, read sibling tickets too. Overlaps and gaps between tickets are findings.
-3. Spot-check the `iot` repo (`~/Develop/iot`) for every `Pattern:` path and every
+3. Spot-check the `iot` repo (your local checkout) for every `Pattern:` path and every
    identifier the ticket says exists. Use `ls`/`grep` only. Deep legacy verification is
    `legacy-source-scout`'s job; flag claims for it instead.
 

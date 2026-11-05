@@ -124,6 +124,12 @@ Implementation details (`redirect: "manual"`, `AbortSignal.timeout(55 s)`) are f
 they are the requirement**, such as a security or ops policy a reviewer must check. They
 are not fine when they only describe how one engineer would do it.
 
+**[open] 3.4a** Name a proof by the behaviour or test title it checks, not by a file that
+doesn't exist yet ("a test where a mid-cycle loop finishes before the DB closes", not
+"`shutdown.test.ts`"). Recommendation: adopt it.
+*Why:* on MFB-1601 two proofs named files that landed elsewhere; the behaviour was proven,
+but the closeout had to correct the ticket (suggested on MFB-1587, 2026-11-04).
+
 ### 3.5 Size and split
 - 2–6 criteria. More than 6, or two unrelated verbs in the summary, means split.
 - **L** (1–2 weeks) is a smell. Prefer two **M** tickets, each leaving something verifiable.
@@ -186,7 +192,7 @@ differences either way.
   survive.
 - Site: `farmbot.atlassian.net`, project `MFB`. The design docs live on
   `farmbot-au.atlassian.net`, which may not be granted to the MCP; fall back to a local
-  export (DPS: `~/Documents/Epic- Rewrite M3S as the Device Provisioning System.md`) and
+  export (for DPS, the epic page "Epic: Rewrite M3S as the Device Provisioning System") and
   say so. Exports drop the collapsed ticket headings, so match bodies by order within a
   phase.
 
@@ -211,3 +217,4 @@ criteria verified in the PR.
 ## Changelog
 
 - **v0 (2026-10-29)** — first draft from MFB-1587 review. Open: 3.1a, 3.5a, 3.7a, 3.9a, 4a.
+- **v0.1 (2026-11-04)** — added open proposal 3.4a (name proofs by behaviour, not file) from the MFB-1601 closeout.

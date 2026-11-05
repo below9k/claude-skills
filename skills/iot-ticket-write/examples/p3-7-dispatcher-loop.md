@@ -1,6 +1,6 @@
 # Example: MFB-1607 · P3.7 Dispatcher loop
 
-A **Story** rewritten to the standard. Facts were checked against `~/Develop/m3s` on
+A **Story** rewritten to the standard. Facts were checked against the M3S source on
 2026-10-29. This shows the target level of detail; it is not yet published to Jira.
 
 ## Before (as in Jira)

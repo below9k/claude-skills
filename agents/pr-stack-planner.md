@@ -13,7 +13,7 @@ and branches named `<type>/mfb-<n>-<slug>`. You map the stack and say what to do
 ## Inputs
 
 A ticket key (to plan a new branch), or a branch or PR number (to inspect a stack). Run
-everything from the `iot` checkout (`~/Develop/iot` unless told otherwise).
+everything from the `iot` checkout (the current repo unless told otherwise).
 
 ## Gather
 
@@ -42,11 +42,32 @@ the epic's children.
 
 - Draw it: `#449 feat/mfb-1604-planner → #446 feat/mfb-1593-state-machines → #444 → main`,
   with state and review decision for each PR.
+- **Rules for every restack command you print:**
+  - Record old head SHAs (`gh pr view <n> --json headRefOid`) for every PR in the chain
+    *before* anything is rewritten.
+  - Rebase the remote-tracking ref (`origin/<branch>`), never a local branch: a fresh clone
+    has none, a worktree may hold it, and a stale one rebases old commits. HEAD ends up
+    detached at the result; push it with `HEAD:<branch>`.
+  - Pushes go to an HTTPS URL, so a bare `--force-with-lease` is always rejected
+    (`stale info`). Pin it: `--force-with-lease=<branch>:<old head SHA>`. Never print
+    plain `--force`.
 - **Merged base:** when a PR's base branch has merged (squash), its child needs
-  `git rebase --onto origin/main <old-base-tip> <child>`, then a base change with
-  `gh pr edit <n> --base main`. Work out `<old-base-tip>` from the merged PR's head SHA
-  (`gh pr view <n> --json headRefOid`).
-- **Base moved:** a child behind its parent needs `git rebase origin/<parent>`.
+  `git rebase --onto origin/main <old-base-tip> origin/<child>`, then a base change with
+  `gh pr edit <n> --base main`. `<old-base-tip>` is the merged PR's head SHA.
+- **Base moved (parent only gained commits):** a child behind its parent needs
+  `git rebase origin/<parent> origin/<child>` (fetch first).
+- **Base rewritten (parent was rebased or force-pushed, e.g. after its own base merged):**
+  never `git rebase origin/<parent>`; that replays the parent's old commits. Use
+  `git rebase --onto <parent's new head SHA> <parent's old head SHA> origin/<child>`. The new
+  SHA is `git rev-parse HEAD` right after the parent's push (a push to a URL doesn't update
+  `origin/<parent>`). Before pushing the child, check
+  `git merge-base --is-ancestor <new parent SHA> HEAD`.
+- **Child contains a merge commit that resolved conflicts** (e.g. #450's 9500e880): a
+  linear rebase drops the merge and brings the conflicts back, and merging the rewritten
+  parent in conflicts on the duplicated history (#450: 10 files). Squash the child's own
+  changes onto the parent's new head instead:
+  `git checkout --detach <new parent>; git diff <parent head it merged> <child head> | git apply --3way --index; git commit`.
+  This is a force push to a reviewed branch, so it needs the owner's OK.
 - Flag PRs whose body says "Stacked on #X" when the actual base disagrees.
 
 ## Output
