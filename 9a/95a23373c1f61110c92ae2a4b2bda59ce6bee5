@@ -1,0 +1,26 @@
+skills/work-ticket/SKILL.md
+  s_5485d908c00df7::t_2fbcbb750bd499 3
+skills/push/SKILL.md
+  s_5485d908c00df7::t_55f33cb7d7e678 95
+skills/review-follow-up/SKILL.md
+  s_5485d908c00df7::t_2fbcbb750bd499 3
+repos/README.md
+  s_5485d908c00df7::t_2fbcbb750bd499 11-12
+  s_5485d908c00df7::t_55f33cb7d7e678 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9a95a23373c1f61110c92ae2a4b2bda59ce6bee5",
+  "prompts": {},
+  "sessions": {
+    "s_5485d908c00df7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "483b66bc-29cb-4b2c-a041-78b434fe7b19",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Chris Daniel <cdaniel@savicontrols.com>"
+    }
+  }
+}
