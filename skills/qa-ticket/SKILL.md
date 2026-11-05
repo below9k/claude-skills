@@ -2,20 +2,20 @@
 name: qa-ticket
 description: >
   Use this skill when asked to QA, test, validate, or regression-test a Jira
-  ticket or GitLab merge request in the project's deployed test environment.
-  Use Jira MCP to retrieve requirements and acceptance criteria and GitLab
-  MCP to inspect the MR, pipeline, changes, and artifacts. Deploy the latest
-  appropriate artifact to the configured test server and test the running
-  application. For user-facing functionality, perform live interactive
-  browser testing using Playwright MCP: navigate the application, click
-  controls, enter and edit values, submit forms, save changes, refresh,
-  verify persistence, exercise relevant error states, and validate resulting
-  backend or system behavior where applicable. Test as an actual user would,
-  rather than only inspecting the DOM, screenshots, APIs, or source code.
-  Perform regression testing of functionality affected by the changes and
-  produce a detailed QA report.
+  ticket or an MR/PR in the project's deployed test environment. Loads the
+  repo profile for the test server, artifact source, and deploy steps; uses
+  Jira for requirements and acceptance criteria and the forge (GitLab or
+  GitHub) for the change, pipeline, and artifacts. Deploys the right build to
+  the test environment and tests the running application. For user-facing
+  functionality, performs live interactive browser testing with Playwright
+  MCP: navigate, click, enter and edit values, submit, save, refresh, verify
+  persistence, exercise error states, and validate backend or system effects.
+  Tests as a user would, not by inspecting the DOM, screenshots, APIs, or
+  source alone. Runs risk-based regression testing and produces a detailed QA
+  report.
 context: fork
-agent: qa-ticket
+agent: general-purpose
+model: opus
 effort: high
 ---
 
@@ -29,7 +29,7 @@ $ARGUMENTS
 
 ## Purpose
 
-Perform end-to-end QA of a Jira ticket or GitLab merge request on an actual
+Perform end-to-end QA of a Jira ticket or MR/PR on an actual
 deployed build, validating both:
 
 1. The implementation satisfies the ticket requirements.
@@ -42,18 +42,22 @@ the user explicitly asks.
 
 ## Inputs
 
-The user may provide a Jira ticket (e.g. `SN-1234`), a GitLab MR, or both; a
+The user may provide a Jira ticket (e.g. `PRJ-1234`), an MR/PR, or both; a
 release branch; a specific artifact; an instruction to test the latest
 release candidate instead of the MR build; or an alternate test server.
 
-Infer missing Jira/MR relationships through Jira and GitLab when they are
+Infer missing Jira/MR relationships through Jira and the forge when they are
 clearly linked. Never invent ticket numbers, MRs, release branches,
 artifacts, or requirements.
 
-## Default Test Server
+## Repo Profile and Test Environment
 
-    savis-101627.local            (SSH, user `savi`)
-    http://savis-101627.local/    (web UI)
+Load the repo profile (`~/.claude/repos/README.md`) and read its `README.md` and
+`qa-env.md`. They name the test server, how to reach it, where build artifacts come from,
+the deploy steps, the existing fakes, and the regression areas. The repo's own docs win.
+If there is no profile or no `qa-env.md`, find the documented deploy procedure in the repo
+(README, deploy scripts, CI jobs). If you can't establish a test environment and a
+deploy path with confidence, stop and ask; never guess a host.
 
 If the user specifies another test server, use it instead.
 
@@ -69,7 +73,7 @@ treat an SSH host as disposable merely because it is reachable.
 # Phase 1 — Gather Requirements
 
 Use the Jira MCP to retrieve the complete ticket: summary, description,
-acceptance criteria (sometimes stored in `customfield_10160`), requirements,
+acceptance criteria (the profile says if they live in a custom field), requirements,
 comments, linked issues, relevant attachments, status, reproduction steps,
 and any referenced branch, MR, commit, or release.
 
@@ -100,14 +104,14 @@ For each requirement, write down:
 
 ---
 
-# Phase 2 — Inspect the GitLab Change
+# Phase 2 — Inspect the Change
 
-Use the GitLab MCP to inspect the MR: source and target branches, commits,
+Use the forge (GitLab MCP or `gh`) to inspect the MR/PR: source and target branches, commits,
 the complete diff, description, pipeline status, discussions, available
 artifacts, and existing tests for the changed behavior.
 
-The target is normally `release/v#.#.#` or `release/<project>/v#.#.#`; never
-assume `main`, `master`, or `develop`.
+The target is the profile's base branch for the work (often a release or
+stacked branch); never assume `main`, `master`, or `develop`.
 
 Compare the implementation against the Jira requirements and determine what
 behavior changed, which components, services, interfaces, APIs, and
@@ -142,64 +146,35 @@ Record:
 ## Release Candidate Mode
 
 Only if the user explicitly asks to test the latest RC: determine the MR's
-release branch, find its latest successful RC artifact in GitLab, verify the
+release branch, find its latest successful RC artifact on the forge, verify the
 artifact actually belongs to that release, and record the exact RC/build
 version. Never substitute an RC for the MR artifact otherwise.
 
 ---
 
-# Phase 4 — Download Artifact
+# Phases 4–8 — Deploy
 
-Download the artifact with the GitLab MCP or other configured GitLab
-tooling. Confirm the download completed, verify checksums when available,
-and do not proceed with an incomplete or corrupt artifact.
+Deploy exactly as the profile's `qa-env.md` (or the repo's documented procedure)
+describes. The usual shape, which the profile fills in:
 
----
+1. **Download** the artifact with the forge's tooling. Confirm it completed, verify
+   checksums when available, and never proceed with an incomplete or corrupt artifact.
+2. **Upload** to a unique path on the test server (e.g. `/tmp/<artifact-name>`) so it
+   can't be confused with earlier QA artifacts. Confirm the upload completed.
+3. **Install**: verify the server identity again, unpack the artifact in its actual
+   format (inspect it rather than assuming), and run its installer or the documented
+   install step with the privileges it needs. Capture output and exit status. If it fails,
+   capture the error and decide whether the artifact, environment, or procedure is at
+   fault; report it if it can't be safely resolved.
+4. **Restart or reboot** as the procedure requires, only after re-verifying the host. A
+   dropped SSH connection during a reboot is expected, not a failure. Never reboot to
+   hide or recover from an unexplained failed installation.
+5. **Wait for recovery**: reconnect, confirm the host identity and that it actually
+   restarted (`uptime`), and that the application services are up (status and logs).
+   Don't start functional testing until results would be meaningful.
 
-# Phase 5 — Upload to Test Server
-
-Upload to `/tmp` on the test server, using a unique path such as
-`/tmp/<artifact-name>` so it cannot be confused with earlier QA artifacts.
-Confirm the upload completed before installing.
-
----
-
-# Phase 6 — Install
-
-SSH in and verify the server identity again. In `/tmp`, extract the artifact
-in its actual format — inspect it rather than assuming; for a tar archive
-this is normally `tar -xf <artifact>`.
-
-Run the installer packaged with the artifact, or the one the repository
-documents, with the privileges the normal installation requires. Capture its
-output and exit status.
-
-If installation fails: capture the error, determine whether the artifact,
-environment, or procedure is at fault, and report it if it cannot be safely
-resolved. Never reboot to hide or recover from an unexplained failed
-installation.
-
----
-
-# Phase 7 — Reboot
-
-After a successful installation, and only after verifying the connected
-machine is the intended test server, reboot it:
-
-    reboot -f
-
-Use elevated privileges if required. The SSH connection will drop; that is
-expected, not a test failure.
-
----
-
-# Phase 8 — Wait for Recovery
-
-Wait for the server to become reachable, reconnect, and check `hostname` and
-`uptime` to confirm it actually rebooted. Confirm the required application
-services have started, checking service status and logs as needed. Do not
-begin functional testing until the system is initialized enough for results
-to be meaningful.
+For environments deployed by CI (preview apps, staging from a pipeline), the "deploy" is
+triggering or locating that deployment and confirming which commit it runs.
 
 ---
 
@@ -238,7 +213,7 @@ layers, validate the complete behavior, not one layer.
 
 For any ticket that affects user-facing functionality, test the deployed
 application interactively using the configured browser automation,
-preferably Playwright MCP, at `http://savis-101627.local/` or the alternate
+preferably Playwright MCP, at the test environment's web UI (from the profile) or the alternate
 server. Authenticate only with test credentials that are already configured
 and authorized.
 
@@ -341,28 +316,26 @@ than marking it BLOCKED. Examples:
 - Simulated devices that speak a driver's protocol (TCP/UDP/HTTP/serial
   over TCP), including status feedback and reconnect behavior.
 - Additional IP addresses so several simulated devices can coexist.
-- HTTP/TCP/UDP servers that capture and log what the sled sends out
+- HTTP/TCP/UDP servers that capture and log what the system sends out
   (webhooks, device commands, cloud calls).
 - Fake third-party or cloud endpoints returning scripted responses.
-- Scripted mesh clients using the same `interfaceFactory` the services use.
+- Scripted clients using the same service interfaces the application uses.
 - Fault injection: dropped connections, slow responses, error codes,
   malformed payloads.
 
 Rules:
 
-1. **Reuse first.** Search the repo for existing fakes before writing one,
-   e.g. `lerna/packages/webos3-simulator`, `driver-*/test-tools/` (such as
-   `fake-everpass`), `core/interface-factory-mock`, `core/utils/mock`, and
-   `webos3-app/src/libs/fake_scap`. Extend an existing fake rather than
-   duplicating it.
+1. **Reuse first.** Search the repo for existing fakes, simulators, and mocks
+   before writing one (the profile's `qa-env.md` lists known ones). Extend an
+   existing fake rather than duplicating it.
 2. **Keep it out of the repo.** Put harness code in a run directory outside
    any checkout, e.g. `~/qa-harness/<ticket-or-rc>/harness/`. Never commit it,
-   and never leave it inside a Savi checkout.
+   and never leave it inside a repo checkout.
 3. **Network safety.** Before adding an IP alias, confirm the address is
    unused (no ping or ARP reply) and prefer addresses on the local machine or
    the test server. Never impersonate a real device's IP or MAC on a shared
    network, and never bind to ports that real services on that host use.
-4. **Point, then restore.** When the sled must be reconfigured to talk to a
+4. **Point, then restore.** When the system must be reconfigured to talk to a
    simulation (e.g. a device's IP changed to the fake), record the original
    configuration and restore it afterwards.
 5. **Tear down.** Stop every process, remove every IP alias, and delete
@@ -416,7 +389,7 @@ Passing acceptance criteria is not evidence of "no regressions."
 For every failure: reproduce it, determine whether it is repeatable and what
 triggers it, check whether it pre-dates the ticket when practical, collect
 evidence from the browser, console, network, application and service logs,
-system state, the GitLab diff, and Jira, and identify the likely responsible
+system state, the MR/PR diff, and Jira, and identify the likely responsible
 code when the evidence supports it.
 
 Classify it as one of: product defect or acceptance-criteria failure,
@@ -520,7 +493,7 @@ limitation — unavailable hardware, inaccessible environment, missing
 credentials, unavailable dependencies, ambiguous criteria, missing test
 data.
 
-## Optional GitLab Update
+## Optional MR/PR Update
 
 If the user asks, post implementation-specific findings to the MR. Jira
 remains the broader QA record.
@@ -576,5 +549,5 @@ Never:
 - Use production systems unless the user explicitly names them as the
   intended environment.
 
-The default deployment target is the dedicated test server
-`savis-101627.local` with user `savi`.
+The default deployment target is the test environment named in the repo
+profile's `qa-env.md`.

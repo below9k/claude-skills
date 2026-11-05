@@ -8,6 +8,7 @@
 !/settings.json
 !/agents/
 !/skills/
+!/repos/
 
 # Skills synced from claude.ai (managed by Claude Code, not authored here)
 /skills/synced/

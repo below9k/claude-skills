@@ -2,7 +2,8 @@
 name: qa-acceptance-criteria
 description: Generate missing acceptance criteria for a Jira ticket by analyzing the ticket, its implementation, and associated GitLab/GitHub MR or PR. Use when a ticket has no acceptance criteria or its acceptance criteria are insufficient for meaningful QA.
 context: fork
-agent: qa-acceptance-criteria
+agent: general-purpose
+model: opus
 effort: high
 ---
 
@@ -63,7 +64,7 @@ Inspect:
 * related issues
 * current status
 
-Acceptance criteria are sometimes stored in `customfield_10160` rather than the description.
+Acceptance criteria are sometimes stored in a custom field rather than the description; the repo profile's **Tracker** section (`~/.claude/repos/README.md`) names it.
 
 Determine whether acceptance criteria already exist.
 
