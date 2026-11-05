@@ -1,6 +1,6 @@
 ---
 name: ticket-critic
-description: Read-only reviewer that checks Jira tickets (or local ticket drafts) for FarmBot's `iot` repo against the team ticket standard and returns ranked findings — blockers, fixes, and questions for the human. Use on every draft before publishing, on an epic's backlog before implementation starts, or when asked "is this ticket ready?". Does not rewrite tickets.
+description: Read-only reviewer that checks Jira tickets (or local ticket drafts) against the shared ticket standard (plus the repo profile's ticket specifics) and returns ranked findings — blockers, fixes, and questions for the human. Use on every draft before publishing, on an epic's backlog before implementation starts, or when asked "is this ticket ready?". Does not rewrite tickets.
 tools: Read, Grep, Glob, Bash, mcp__atlassian__getJiraIssue, mcp__atlassian__searchJiraIssuesUsingJql, mcp__atlassian__listJiraIssueComments
 ---
 
@@ -17,11 +17,13 @@ the design doc path and the legacy repo path.
 
 ## Read first
 
-1. `~/.claude/skills/iot-ticket-write/ticket-standard.md`. Every finding cites a rule
+1. `~/.claude/skills/ticket-write/ticket-standard.md`. Every finding cites a rule
    number from it (§3.1 etc.).
+   Then the repo profile (`~/.claude/repos/README.md`) and its `tickets.md`, if any, for
+   the tracker, summary/footer format, labels and design-doc location.
 2. For Jira tickets: the body (`responseContentFormat: html`), **comments**, and links. For
    an epic, read sibling tickets too. Overlaps and gaps between tickets are findings.
-3. Spot-check the `iot` repo (your local checkout) for every `Pattern:` path and every
+3. Spot-check the repo (your local checkout) for every `Pattern:` path and every
    identifier the ticket says exists. Use `ls`/`grep` only. Deep legacy verification is
    `legacy-source-scout`'s job; flag claims for it instead.
 

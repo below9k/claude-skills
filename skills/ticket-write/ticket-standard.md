@@ -1,14 +1,17 @@
-# FarmBot `iot` ticket standard
+# Ticket standard
 
-**Status: v0 draft, under discussion.** Derived from the DPS rewrite epic (MFB-1587). Every
-rule below has a *Why* tied to something that went wrong or right there. Rules marked
+**Status: v0 draft, under discussion.** Derived from FarmBot's DPS rewrite epic (MFB-1587);
+the *Why* lines cite what went wrong or right there, as worked examples. The rules
+themselves apply to any repo. Every rule below has a *Why*. Rules marked
 **[open]** are still being debated. Follow the current recommendation, and in the first
 reply that uses the rule, say which open rule you applied. When the user settles one,
 update this file and record the decision in the changelog at the bottom.
 
-This file is the single contract. `iot-ticket-write`, `iot-backlog-sync`, `iot-work-ticket`,
-`iot-ticket-closeout`, `ticket-critic` and `legacy-source-scout` all read it. Change it here,
-not in those files.
+This file is the single contract. `ticket-write`, `backlog-sync`, `work-ticket`,
+`ticket-closeout`, `epic-loop`, `ticket-critic` and `legacy-source-scout` all read it. Change
+it here, not in those files. Facts that hold for one repo or tracker only (site, project
+key, summary format, label vocabulary, design-doc location) live in that repo's profile,
+`~/.claude/repos/<name>/tickets.md`.
 
 ---
 
@@ -21,7 +24,8 @@ Read in order of who suffers most from a bad ticket:
 2. **The PR reviewer** (e.g. a teammate running their own review wave). They judge "done"
    against the AC, so the AC must be checkable without opening the design doc.
 3. **Ops / product** quoting behaviour later. Rules they would quote belong in a
-   `.feature` file (ADR 0003), and the ticket says which one.
+   behaviour spec the repo keeps for them (e.g. a `.feature` file), and the ticket says
+   which one.
 
 *Why:* DPS tickets were written for the author, who had the TSD open. Reviewers and future
 agents got `see R3`.
@@ -37,7 +41,7 @@ Summary:  P3.7 Dispatcher loop                       ← "<ID> <outcome noun phr
 <1–2 sentences: what this leaves working, which slice it advances, who notices.>
 
 ### Behaviour
-<What the system does after this ticket, in domain words (CONTEXT.md glossary).
+<What the system does after this ticket, in domain words (the repo's glossary).
  Not a file list. Include the rule rows this ticket implements, quoted inline (§3.1).>
 
 ### Acceptance criteria                              ← Jira HTML task list (§5)
@@ -98,7 +102,7 @@ committing to the repo so the PR can update them.
 
 ### 3.2 Every number and name is sourced
 Constants, counts, state names, field names and paths are either verified against the
-source (legacy repo, `iot` code or design doc) with a citation in **Notes**, or marked
+source (legacy repo, current code or design doc) with a citation in **Notes**, or marked
 `(unverified)`. `legacy-source-scout` does the check.
 
 *Why:* MFB-1604 said "30 ported M3S cases"; the suite has 38. The closeout caught it, but
@@ -158,8 +162,8 @@ Every deferral points to a key (`→ MFB-1599`) or says `not planned`. Mirror it
 "Intentionally deferred".
 
 ### 3.9 Labels and readiness
-**[open] 3.9a** Proposed lifecycle, using the repo's triage vocabulary
-(`docs/agents/triage-labels.md`):
+**[open] 3.9a** Proposed lifecycle, using the repo's triage vocabulary (the profile names
+where it is defined):
 
 | Label | Means |
 | --- | --- |
@@ -168,8 +172,7 @@ Every deferral points to a key (`→ MFB-1599`) or says `not planned`. Mirror it
 | `ready-for-agent` | Passes the critic with no blockers; numbers sourced |
 | `ready-for-human` | Needs judgement, access or a decision an agent can't make |
 
-DPS tickets all carry `triage`. Changing labels is a Jira mutation, so it needs explicit
-approval in the conversation (per `triage-labels.md`).
+Changing labels is a Jira mutation, so it needs explicit approval in the conversation.
 
 ## 4. The design doc ↔ Jira relationship
 
@@ -178,7 +181,7 @@ approval in the conversation (per `triage-labels.md`).
 Today the TSD generated the tickets and then both drifted: the doc says "D1 to D9" and
 `T_M3S`, Jira says "D1 to D11" and `T_DPS`. Recommendation: the doc owns **reference**
 material (§7-style rules, goals, decisions); **Jira owns ticket bodies** once created. The
-doc's backlog section shrinks to an index of keys. `iot-backlog-sync --drift` reports
+doc's backlog section shrinks to an index of keys. `backlog-sync` drift mode reports
 differences either way.
 
 ## 5. Jira formatting
@@ -190,24 +193,27 @@ differences either way.
   rows.
 - Read with `responseContentFormat: html` before editing, so checked state and panels
   survive.
-- Site: `farmbot.atlassian.net`, project `MFB`. The design docs live on
-  `farmbot-au.atlassian.net`, which may not be granted to the MCP; fall back to a local
-  export (for DPS, the epic page "Epic: Rewrite M3S as the Device Provisioning System") and
-  say so. Exports drop the collapsed ticket headings, so match bodies by order within a
-  phase.
+- Site, project and design-doc location come from the profile. If the design-doc site
+  isn't granted to the MCP, fall back to a local export and say so. Exports may drop
+  collapsed headings, so match bodies by order within a phase.
 
 ## 6. Closeout comment shape
 
-Posted when the PR is up (by `iot-ticket-closeout`):
+Posted when the implementation is done, usually once the PR/MR is up (by
+`ticket-closeout`):
 
 ```
 PR: #449 (stacked on #446 → #444). Verified in the PR:
 - [x] <criterion as written> — <test/scenario/command>
 - [x] <criterion> — <evidence>. (Ticket said X; source has Y — corrected here.)
+Changes: <2–5 bullets>
+Verification: `<command>` — PASS; runtime/browser: <result>
 Kept for parity, beyond the ticket: <numbered list>
 Deferred: <item> → <KEY>
 Carried to: <KEY> — <one line>
 ```
+
+Omit lines that are empty.
 
 The checkboxes in the ticket body are ticked as well (HTML `checked`), but only for
 criteria verified in the PR.
@@ -218,3 +224,6 @@ criteria verified in the PR.
 
 - **v0 (2026-10-29)** — first draft from MFB-1587 review. Open: 3.1a, 3.5a, 3.7a, 3.9a, 4a.
 - **v0.1 (2026-11-04)** — added open proposal 3.4a (name proofs by behaviour, not file) from the MFB-1601 closeout.
+- **v0.2 (2026-11-05)** — made repo-agnostic: repo-specific facts moved to
+  `~/.claude/repos/<name>/tickets.md`; §6 gained the Changes and Verification lines from
+  the old `work-ticket` "Implementation Complete" comment.

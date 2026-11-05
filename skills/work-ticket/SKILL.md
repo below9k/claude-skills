@@ -1,6 +1,6 @@
 ---
 name: work-ticket
-description: Implement an engineering ticket such as SN-#### from start to finish. Use when asked to work, implement, fix, develop, or complete a Jira ticket. Retrieves the ticket, reads repository Claude instructions, identifies the associated code and branch, writes down an end-to-end tracer bullet (golden path) for the requested behavior before editing, implements along that path, verifies it, self-reviews every boundary on the path, iterates on failures, and reports completion. For addressing review comments on an existing MR, use review-follow-up instead.
+description: Implement an engineering ticket (e.g. PRJ-1234) from start to finish in any repo. Use when asked to work, implement, fix, develop, pick up, or complete a Jira ticket. Loads the repo profile, checks the ticket is ready, picks the base branch (including stacked PRs), writes down an end-to-end tracer bullet (golden path) before editing, writes tests from the acceptance criteria, implements along the path, runs the repo's gates, self-reviews every boundary, runs the specialist reviewers and an adversarial Codex pass, and hands off to ticket-closeout. Runs inline so it can delegate to agents. For addressing review comments on an existing MR/PR, use review-follow-up instead.
 effort: high
 ---
 
@@ -10,23 +10,32 @@ Work the engineering ticket identified in:
 
 $ARGUMENTS
 
-## Savi repositories: delegate to the specialist agents
+## Load the repo profile
 
-In a Savi repository (`lerna/packages/` at the root), use the Savi subagents at the steps
-below. They detect the DSP vs main line themselves. Give each one the ticket key, the base
-branch, and the specific files or interfaces in question; relay what matters from their
-reports rather than re-deriving it.
+Follow `~/.claude/repos/README.md`: match the repo to a profile and read its `README.md`.
+Read its topic files when a step needs them (`architecture.md` at step 5, `testing.md` at
+step 7, `runtime.md` at step 10). The profile supplies the tracker details, base-branch and
+branch-name rules, commit style, validation gates, spec style, and which agents earn their
+keep here. **The repo's own instructions win** over the profile and over this skill (step 2).
+With no profile, infer these from the repo and say so.
+
+## Agents
+
+Use these at the steps below, as the profile's **Agents** section recommends. Give each one
+the ticket key, the base branch, and the specific files or interfaces in question; relay
+what matters from their reports rather than re-deriving it.
 
 | Step | Agent | When |
 | --- | --- | --- |
-| 4–5. Trace impact | `impact-tracer` | While building the tracer bullet, when it crosses a shared interface, IoC key, service, or process registration |
-| 5. Plan | `slice-planner` | Non-trivial tickets, after the tracer bullet is written and before implementing |
-| 7. Tests | `spec-author` | New behavior or a bug fix needs a spec (and a red-before-fix check) |
+| 1. Readiness | `ticket-critic` | Before building, when the ticket is new to you or the profile asks for it |
+| 3. Base branch | `pr-stack-planner` | The repo ships stacked PRs and a blocker is still in review |
+| 4–5. Impact | `impact-tracer` | The tracer bullet crosses a shared interface, key, service, schema or registration |
+| 7. Parity | `legacy-source-scout` | Rewrite work: pin legacy constants and test cases |
+| 7. Tests | `spec-author` | New behavior or a bug fix needs a test (and a red-before-fix check) |
 | 8, 13. Validation | `spec-runner` | After meaningful edits, and in final validation |
-| 13. Review | `savi-invariant-reviewer` + `async-bug-hunter`, in parallel | Final validation, on the complete diff |
-| 10. Runtime | `sled-e2e` | When wiring (hemera topics, IoC order, pm2 startup) is in question |
+| 13. Review | `conventions-reviewer` + `async-bug-hunter`, in parallel | Final validation, on the complete diff |
 
-Outside Savi repositories, do these steps yourself.
+Run 1 and 3 in parallel. Skip an agent when the change is too small to need it, and say so.
 
 ## Objective
 
@@ -77,7 +86,17 @@ If the ticket is a bug check the fields:
 * what is broken?
 * what will it do/look like to be unbroken?
 
+Read **all comments**: findings carried forward from other tickets' reviews often live
+there. Read every design-doc rule the ticket cites; if the doc isn't reachable, find a local
+export and name the version you used.
+
 Do not begin implementation based only on the ticket title.
+
+**Readiness.** For a ticket you haven't seen before, run `ticket-critic`:
+
+* `READY` / `READY AFTER FIXES` → continue, and list the fixes for the closeout.
+* `NOT READY` → stop. Show the blockers and offer `ticket-write` to fix the ticket first.
+  Proceed anyway only if the user says so, and record that in the PR/MR notes.
 
 If requirements are ambiguous, first investigate the repository, related tickets, existing behavior, and implementation context.
 
@@ -121,12 +140,13 @@ Before making changes:
 
 Never overwrite or discard unrelated user changes.
 
-If the repository's documented workflow requires a ticket branch, follow it. For GitLab
-repositories (`~/develop/savi*`), use the `gitlab-push` skill's base-branch detection and
-branch naming (`PRJ-####/PRJ-###-<kebab-case-description>`, cut from the detected
-`release/v#.#.#` or `release/<project>/v#.#.#` branch).
+Pick the base branch and branch name from the profile's **Branches** section (or the
+repo's documented workflow). Don't assume `main`: some repos fork features from release
+branches, and some stack each ticket on its blockers' branches (use `pr-stack-planner`).
+Work in a worktree if other work is in flight. If the repo requires a local issue tracker
+alongside Jira, follow its docs.
 
-Do not commit or push unless the user asks. When they do, use the `gitlab-push` skill.
+Do not commit or push unless the user asks. When they do, use the `push` skill.
 
 If an existing branch or MR/PR represents the ticket, continue from that work rather than creating a parallel implementation unless repository instructions say otherwise.
 
@@ -168,23 +188,24 @@ which is what code review most often catches.
 Use concrete components, interfaces, handlers, processes, events, and files where they are
 known. It is a behavioral map, not pseudocode, so write no implementation code in this step.
 
-For example, in a Savi repository (names are illustrative):
+For example (names are illustrative; the profile's `architecture.md` may have a
+codebase-specific one):
 
-    User picks a region state in the layout editor
+    User changes a device setting in the settings form
         ↓
-    LayoutRegionPanel → canvas interface caller method (@savi/sled-websocket-client)
+    SettingsForm → settings API client
         ↓
-    sled-websocket-server bridge → NATS
-        ↓ [RISK: driver process restarting; dependsOn gating]
-    canvas display driver handler (registered via interfaceFactory)
+    POST /devices/:id/settings handler → validation
+        ↓ [RISK: concurrent edit overwrites a newer value]
+    settings service → database write
         ↓
-    driver → device command
-        ↓ [RISK: device disconnects mid-command]
-    device confirms → driver publishes new state
+    service publishes a settings-changed event
+        ↓ [RISK: device offline; event never delivered]
+    device worker → device command → device confirms
         ↓
-    UI subscription
+    UI subscription / refetch
         ↓
-    LayoutRegionPanel shows the confirmed state
+    SettingsForm shows the confirmed value
 
 The real path may be shorter or longer. Do not invent layers to make it look complete, and
 when no meaningful multi-component path exists, use the simplest accurate one.
@@ -219,15 +240,20 @@ boundary, determine:
 Mark plausible risks on the tracer bullet as `[RISK: ...]`. Pay most attention to the
 boundaries where defects concentrate: UI → state, caller → handler, service → device,
 event → subscriber, persistence → cache, request → async response, connect → disconnect,
-create → cleanup, retry → duplicate, startup → shutdown. In Savi, also check transport
-choice (interfaceFactory vs localIntfFactory, WebSocket vs NATS), `dependsOn` restart
-ordering, and the process the handler is registered in. Stick to risks the architecture
-supports, not hypothetical ones.
+create → cleanup, retry → duplicate, startup → shutdown. Add the boundaries the profile's
+`architecture.md` calls out for this codebase. Stick to risks the architecture supports,
+not hypothetical ones.
 
 #### Turn the path into the plan
 
 Write a concise checklist organized around behavior, not around files. Each item maps to a
-part of the tracer bullet:
+part of the tracer bullet, and each should end in something you can verify with a command
+that actually runs today (the profile's **Validation** section and `testing.md` say which
+do). If an item can only be checked by eye on a running system, say so; that's valid but
+expensive. If nothing in the plan can be verified without first fixing the toolchain, say
+that at the top; fixing it may be the first item. Put the item most likely to invalidate
+the rest of the plan first. If the ticket turns out to be a one-file change with an existing
+test, say so instead of inventing a plan:
 
     [ ] editor initiates the state change
     [ ] interface accepts and validates the input
@@ -288,6 +314,13 @@ Preserve backward compatibility unless the ticket explicitly changes existing be
 
 When the repository has automated testing appropriate to the change, add or update tests that verify the requested behavior.
 
+Where practical, turn each acceptance criterion into a failing test **before** implementing
+it, and confirm it fails for the right reason. Use the framework and style the profile and
+the package's neighbouring tests use (some repos want behaviour rules as `.feature`
+scenarios, others want tests beside the code). For rewrite work, have `legacy-source-scout`
+inventory the legacy tests for the component and port them; if the count differs from the
+ticket, the code wins, and the difference goes in the closeout.
+
 Tests should cover the important behavior introduced or modified by the ticket.
 
 Where appropriate include:
@@ -320,7 +353,8 @@ without proving behavior.
 
 Do not wait until the entire implementation is complete before checking it.
 
-After meaningful changes, run the narrowest useful validation.
+After meaningful changes, run the narrowest useful validation. The profile's
+**Validation** section lists the gates narrowest first; record each with its result.
 
 Examples:
 
@@ -362,7 +396,9 @@ Finally, document the outcome of the iteration loop, including any changes made,
 
 If the affected behavior can reasonably be exercised locally, run the application or affected service.
 
-Follow documented repository startup procedures.
+Follow documented repository startup procedures, the profile's `runtime.md`, or the `run`
+skill. Attach to what's already running before starting anything, and never restart shared
+processes without permission.
 
 Verify that required services become ready.
 
@@ -450,7 +486,7 @@ Then write out the completed path with its status:
         ↓
     ✓ device command and confirmation
         ↓
-    ✗ UI subscription (not verified: no device on the dev sled)
+    ✗ UI subscription (not verified: no device in the dev environment)
 
 Mark a step ✓ only once it is implemented and reasonably validated. If the review exposes a
 defect or a missing path, go back to that step, fix it, update tests where appropriate,
@@ -458,6 +494,20 @@ rerun the affected validation, and repeat that portion of this review. Move on t
 specialist reviewers only once the tracer bullet holds. They do not replace this review:
 it asks whether the feature works end to end, and they look independently for broken
 invariants and async defects.
+
+#### Adversarial pass
+
+Run Codex read-only against the branch diff, using the invocation in the
+`adversarial-review` skill's "Adversarial Review (Codex CLI)" section. Give it the ticket's
+acceptance criteria, the diff command (`git diff <base>...HEAD`), and focus areas that fit
+the change (the profile may suggest some). Verify each finding yourself, then sort it:
+
+* **Fixed**: fix it now, with a test.
+* **Deferred to <KEY>**: belongs to another ticket.
+* **Carried to <KEY>**: changes how a *later* ticket must be built. Goes to the closeout.
+* **Confirmed fine**: checked and not a problem; say why in one line.
+
+If Codex isn't available, say so in the PR/MR. Don't skip it silently.
 
 #### Checklist
 
@@ -488,34 +538,14 @@ Do not remove project artifacts required by the implementation.
 
 ### 15. Ticket update
 
-When the implementation and local verification are complete, post a concise implementation update to the ticket.
+When the implementation and local verification are complete, hand off to the
+`ticket-closeout` skill: it verifies each acceptance criterion against the change, drafts
+the ticket comment, ticks verified boxes, and carries findings into downstream tickets, all
+with the user's approval. It works from a PR/MR when one exists, or from the branch.
 
-Use:
-
-## Implementation Complete
-
-**Implementation:** <branch/MR/PR/commit when known>
-
-### Changes
-
-* <important change>
-* <important change>
-
-### Acceptance Criteria
-
-* ✅ <criterion> — <implementation/verification>
-* ✅ <criterion> — <implementation/verification>
-* ⚠️ <criterion> — <remaining limitation if any>
-
-### Verification
-
-* `<command/test>` — PASS
-* `<command/test>` — PASS
-* Browser/runtime: <result when applicable>
-
-### Notes
-
-<Relevant implementation notes, limitations, or follow-up concerns.>
+When the user wants a PR/MR, open it through the `push` skill, with the four-bucket
+adversarial result under its test plan and the ticket's out-of-scope items as
+"intentionally deferred".
 
 Do not mark the ticket as QA-approved.
 
@@ -549,6 +579,6 @@ The task is complete when:
 * browser behavior has been verified when relevant
 * no known implementation deficiency remains undocumented
 * temporary artifacts are cleaned up
-* the Jira implementation update has been posted
+* the ticket closeout has been posted, or drafted for the user's approval
 
 Do not claim completion merely because code has been written.

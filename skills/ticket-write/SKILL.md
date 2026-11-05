@@ -1,10 +1,10 @@
 ---
-name: iot-ticket-write
-description: Draft, rewrite, or critique Jira tickets (MFB project) for FarmBot's `iot` monorepo against the team ticket standard. Use when asked to write a ticket, break an epic or design doc into tickets, tighten or rewrite existing tickets, or check whether a ticket is ready to implement. Works on one ticket or a whole epic; drafts locally and iterates with the user; never writes to Jira without approval (hand-off to iot-backlog-sync).
+name: ticket-write
+description: Draft, rewrite, or critique Jira tickets against the shared ticket standard (plus the repo profile's ticket specifics). Use when asked to write a ticket, break an epic or design doc into tickets, tighten or rewrite existing tickets, or check whether a ticket is ready to implement. Works on one ticket or a whole epic; drafts locally and iterates with the user; never writes to Jira without approval (hand-off to backlog-sync).
 effort: high
 ---
 
-# Write iot tickets
+# Write tickets
 
 Request:
 
@@ -12,13 +12,14 @@ $ARGUMENTS
 
 ## Read first
 
-1. `~/.claude/skills/iot-ticket-write/ticket-standard.md` — the contract. Every draft must
+1. `~/.claude/skills/ticket-write/ticket-standard.md` — the contract. Every draft must
    satisfy it. Note which **[open]** rules you applied.
-2. `~/.claude/skills/iot-ticket-write/examples/` — before/after rewrites. Match their
-   level of detail.
-3. In the `iot` repo (your checkout: the directory whose `pnpm-workspace.yaml` names
-   `apps/* packages/* infra/*`): `CONTEXT.md` (glossary), `docs/adr/` (normative),
-   `docs/agents/triage-labels.md`, and `AGENTS.md`.
+2. The repo profile (`~/.claude/repos/README.md`): its **Tracker** section and `tickets.md`
+   (summary and footer format, design-doc location, labels, legacy repo for rewrites).
+3. `~/.claude/skills/ticket-write/examples/` — before/after rewrites. Match their level of
+   detail.
+4. In the repo: its glossary (e.g. `CONTEXT.md`), ADRs, label/triage docs, and
+   `AGENTS.md`/`CLAUDE.md`, when present.
 
 ## Modes
 
@@ -37,16 +38,16 @@ Work out the mode from the request. Ask only if it's genuinely ambiguous.
 - Jira: read with `responseContentFormat: html` and `view: evidence`. Read **comments**
   too; carried-forward findings live there (standard §3.7). For an epic:
   `parent = <KEY> ORDER BY key`.
-- Design doc: try Confluence. If `farmbot-au.atlassian.net` isn't granted, look for a local
-  export of the design doc and say which version you used.
-- Open PRs that touch the area (`gh pr list -R farmbot-monitoring-solutions/iot --search
-  <key>`). Their "Deferred to" and "Carried to" lines are requirements for other tickets.
+- Design doc: try Confluence (the profile names the site). If it isn't granted to the MCP,
+  look for a local export and say which version you used.
+- Open PRs/MRs that touch the area (search by ticket key). Their "Deferred to" and
+  "Carried to" lines are requirements for other tickets.
 
 ### 2. Ground the claims (in parallel)
-- **`legacy-source-scout`** for rewrite tickets: give it the legacy repo path (e.g.
-  a local clone or `gh api`), the component, and every number, state or name the draft asserts. It
-  returns verified values with `file:line`, and behaviours the doc omits.
-- Check that each `Pattern:` path exists in `iot` (a plain `ls` is fine).
+- **`legacy-source-scout`** for rewrite tickets: give it the legacy repo (a local clone, or
+  the forge API; the profile names it), the component, and every number, state or name the
+  draft asserts. It returns verified values with `file:line`, and behaviours the doc omits.
+- Check that each `Pattern:` path exists in the repo (a plain `ls` is fine).
 
 ### 3. Draft
 - Write drafts to a local file first: `$CLAUDE_JOB_DIR/tmp/tickets/<ID-or-KEY>.md` when
@@ -72,13 +73,14 @@ Present compactly:
 
 When the user corrects a *pattern* rather than one ticket ("never put timeouts in AC",
 "always say which feature file"), propose the exact edit to `ticket-standard.md` and its
-changelog line, and apply it once they agree. The standard should get better with every
+changelog line, and apply it once they agree. If the rule only holds for one repo or
+tracker, put it in that profile's `tickets.md` instead. The standard should get better with every
 round, so the same correction isn't needed twice.
 
 ### 6. Hand off
-Once the user approves the drafts, hand off to **`iot-backlog-sync`** to publish (create or
+Once the user approves the drafts, hand off to **`backlog-sync`** to publish (create or
 update, links, labels). Don't write to Jira from this skill. Jira mutations need explicit
-approval in the conversation (repo rule in `docs/agents/triage-labels.md`).
+approval in the conversation.
 
 ## Output
 

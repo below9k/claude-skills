@@ -1,21 +1,16 @@
 ---
-name: gitlab-code-review
+name: adversarial-review
 description: >
-  Use this skill whenever the user asks for a code review, review of
-  changes, review of a commit, review of a branch, review before creating
-  or updating a merge request, or assessment of changes for correctness,
-  regressions, maintainability, or quality. When a Jira ticket can be
-  identified, inspect the Jira issue and acceptance criteria and verify
-  that the implementation satisfies the stated requirements. For GitLab repositories,
-  determine the intended release/base branch before reviewing. GitLab
-  feature branches typically originate from release/v#.#.# or
-  release/<project>/v#.#.# branches, and reviews should compare the feature
-  branch against that base branch rather than automatically comparing
-  against main, master, or develop. Review the actual diff and relevant
-  surrounding code, not just the changed lines. Every review also runs
-  an iterative adversarial review through Codex CLI, whose findings are
-  verified and merged into the final review. GitLab repositories are
-  located in folders named like ~/develop/savi*.
+  Thorough code review of working-tree changes, a commit, a branch, or an
+  MR/PR, on GitLab or GitHub — before creating or updating an MR/PR, or
+  whenever the user asks for a review or an assessment of correctness,
+  regressions, or quality. Compares against the branch's real base (from the
+  repo profile; often a release or stacked branch, not main), checks the
+  implementation against the Jira ticket's acceptance criteria, reads
+  surrounding code rather than just changed lines, runs the profile's
+  specialist reviewer agents, and runs an iterative adversarial review
+  through Codex CLI whose findings are verified and merged into the final
+  review.
 ---
 
 # Code Review
@@ -70,7 +65,8 @@ Jira issue before completing the code review.
 
 You can find the Jira ticket reference in the branch name, commit messages,
 merge request title or description, or within the changed code itself.
-Tickets usually look like SN-####, DSP-###, GAL-####, or similar.
+Tickets look like `PRJ-1234`; the profile's **Tracker** section lists the project keys and
+where acceptance criteria live (some projects use a custom field).
 
 Use the Jira issue to establish the intended behavior and acceptance criteria,
 rather than relying solely on the implementation or the user's description.
@@ -137,53 +133,19 @@ intended behavior.
 
 ---
 
-## GitLab Base Branch
+## Base Branch
 
-For GitLab repositories, inspect the configured remotes:
+Load the repo profile (`~/.claude/repos/README.md`) and use its **Branches** rule for the
+base. Common shapes:
 
-    git remote -v
+- features fork from a release branch (`release/v#.#.#`, `release/<project>/v#.#.#`);
+- stacked PRs, each based on its blocker's branch;
+- trunk (`main`).
 
-Typically:
-
-    origin    -> user's fork
-    upstream  -> canonical repository
-
-Inspect branches:
-
-    git fetch upstream
-    git branch -a
-
-Determine the feature branch's intended base branch.
-
-Common release branch patterns:
-
-    release/v#.#.#
-    release/<project>/v#.#.#
-
-Examples:
-
-    release/v3.2.1
-    release/dsp/v1.1.3
-
-The review should normally compare:
-
-    <feature-branch> vs <base-release-branch>
-
-Do not automatically compare against:
-
-    main
-    master
-    develop
-
-unless repository context establishes that one of those is the correct
-base branch.
-
-If the branch itself contains enough context to identify its parent release
-branch, use that information.
-
-If multiple release branches are plausible and the correct base cannot be
-determined confidently, ask the user before proceeding with a branch-level
-review.
+Without a profile, inspect the remotes and branches (`git remote -v`, `git fetch <canonical>`,
+`git branch -a`), the MR/PR's target, and the branch's history. Don't automatically compare
+against `main`, `master`, or `develop` unless the evidence says that is the base. If
+several bases are plausible, ask before a branch-level review.
 
 ---
 
@@ -533,19 +495,18 @@ regressions introduced by the fixes.
 
 ---
 
-## Savi Specialist Reviewers
+## Specialist Reviewers
 
-In a Savi repository (`lerna/packages/` at the root), also start these two subagents in
-parallel with Codex round 1, each given the same diff command and base branch:
+Start these two subagents in parallel with Codex round 1, each given the same diff command
+and base branch, unless the change is too small to warrant them (say so):
 
-- `savi-invariant-reviewer` — service-mesh house rules (transport, data access,
-  `dependsOn`, process registration).
-- `async-bug-hunter` — promise lifetime, timer leaks, reconnect, retry, and partial-failure
-  bugs.
+- `conventions-reviewer`: the repo's documented house rules (its `CLAUDE.md`/ADRs and the
+  profile's `architecture.md`). Skip it when the repo has no written rules beyond lint.
+- `async-bug-hunter`: promise lifetime, timer leaks, reconnect, retry, and partial-failure
+  bugs. Most valuable on transport, worker, queue, and connection-handling code.
 
-Both detect the DSP vs main line themselves. Reconcile their findings exactly like Codex
-findings (verify, then accept, reject with evidence, or mark uncertain), and include
-accepted ones in the Codex round 2 challenge list.
+Reconcile their findings exactly like Codex findings (verify, then accept, reject with
+evidence, or mark uncertain), and include accepted ones in the Codex round 2 challenge list.
 
 ---
 
@@ -562,7 +523,8 @@ End the review with:
     - Medium: #
     - Low: #
 
-    Savi reviewers: <run | not a Savi repo | failed, because ...>
+    Profile: <name | none>
+    Specialist reviewers: <run | skipped, because ... | failed, because ...>
     Adversarial review (Codex): <rounds run, or why it was not run>
     - Codex findings accepted: #
     - Codex findings rejected: #
@@ -570,7 +532,7 @@ End the review with:
 
     Overall assessment: <summary>
 
-Tag each finding with its source: `(Claude)`, `(Codex)`, `(invariant-reviewer)`,
+Tag each finding with its source: `(Claude)`, `(Codex)`, `(conventions-reviewer)`,
 `(async-bug-hunter)`, or a combination when more than one found it.
 List disputed items after the findings, each with both positions. Briefly
 list rejected Codex findings with the one-line reason for rejection, so

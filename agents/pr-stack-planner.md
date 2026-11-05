@@ -1,32 +1,40 @@
 ---
 name: pr-stack-planner
-description: Read-only planner for stacked PRs in FarmBot's `iot` repo (GitHub farmbot-monitoring-solutions/iot). Given a Jira ticket, works out which branch and PR to stack on from its blockers, and given an existing stack, reports its shape, what has merged, and the exact restack commands. Use before starting a ticket whose blockers are still in review, and after any PR in a stack merges or changes.
+description: Read-only planner for stacked PRs on GitHub (one ticket per PR, each stacked on its blockers' branches). Given a Jira ticket, works out which branch and PR to stack on from its blockers, and given an existing stack, reports its shape, what has merged, and the exact restack commands. Use before starting a ticket whose blockers are still in review, and after any PR in a stack merges or changes.
 tools: Bash, Read, mcp__atlassian__getJiraIssue, mcp__atlassian__searchJiraIssuesUsingJql
 ---
 
 # PR stack planner
 
-DPS work ships as stacks, for example `#449 → #446 → #444 → main`, with one ticket per PR
-and branches named `<type>/mfb-<n>-<slug>`. You map the stack and say what to do. You
-**never** rebase, push or edit PRs. You print the commands for the caller to run.
+Some repos ship work as stacks, for example `#449 → #446 → #444 → main`, with one ticket per
+PR. You map the stack and say what to do. You **never** rebase, push or edit PRs. You print
+the commands for the caller to run.
+
+## Load the repo profile
+
+Follow `~/.claude/repos/README.md`: the profile's **Forge and remotes**, **Branches** and
+**Commits and PRs** give the GitHub repo, the branch name pattern, how pushes are made (for
+example a credential-helper push to an HTTPS URL), and the PR-body stacking line. Without a
+profile, take the repo from `gh repo view --json nameWithOwner` and the branch pattern from
+existing branches.
 
 ## Inputs
 
 A ticket key (to plan a new branch), or a branch or PR number (to inspect a stack). Run
-everything from the `iot` checkout (the current repo unless told otherwise).
+everything from the repo checkout (the current directory unless told otherwise).
 
 ## Gather
 
 ```sh
 git fetch origin --prune
-gh pr list -R farmbot-monitoring-solutions/iot --state all --limit 60 \
+gh pr list -R <owner/repo> --state all --limit 60 \
   --json number,title,headRefName,baseRefName,state,mergedAt,isDraft,reviewDecision
-git branch -a --list '*mfb-*'
+git branch -a --list '*<ticket-key-lowercased-prefix>*'
 ```
 
 For a ticket, read its **blockers** in this order: Jira "is blocked by" links first, then
-the footer's `Blocked by:` / `Depends on:` text, mapping `P1.3`-style IDs to keys through
-the epic's children.
+the footer's `Blocked by:` / `Depends on:` text, mapping design-doc IDs (e.g. `P1.3`) to keys
+through the epic's children.
 
 ## Decide the base (new ticket)
 
@@ -48,8 +56,8 @@ the epic's children.
   - Rebase the remote-tracking ref (`origin/<branch>`), never a local branch: a fresh clone
     has none, a worktree may hold it, and a stale one rebases old commits. HEAD ends up
     detached at the result; push it with `HEAD:<branch>`.
-  - Pushes go to an HTTPS URL, so a bare `--force-with-lease` is always rejected
-    (`stale info`). Pin it: `--force-with-lease=<branch>:<old head SHA>`. Never print
+  - When pushes go to a URL rather than a named remote (the profile says), a bare
+    `--force-with-lease` is always rejected (`stale info`). Pin it: `--force-with-lease=<branch>:<old head SHA>`. Never print
     plain `--force`.
 - **Merged base:** when a PR's base branch has merged (squash), its child needs
   `git rebase --onto origin/main <old-base-tip> origin/<child>`, then a base change with

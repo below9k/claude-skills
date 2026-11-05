@@ -9,49 +9,52 @@ and global settings. This repo is checked out directly as `~/.claude`.
 | --- | --- |
 | `skills/` | Custom skills, one directory per skill with a `SKILL.md` |
 | `agents/` | Subagent definitions for the `Agent` tool (see [`agents/README.md`](agents/README.md)) |
+| `repos/` | Repo profiles: the per-codebase facts the generic skills and agents load (see [`repos/README.md`](repos/README.md)) |
 | `settings.json` | Global Claude Code settings (model, hooks, theme, plugins) |
+
+Skills and agents are **repo-agnostic**. Each one first matches the current repo to a
+profile in `repos/` (by remote URL, then marker files) and reads only the topic files it
+needs. The repo's own `CLAUDE.md` / `AGENTS.md` / ADRs still win. Profiles exist for:
+
+| Profile | Repo |
+| --- | --- |
+| `repos/savi/` | Savi sled monorepo, GitLab `savicontrols/savi` (DSP and main lines) |
+| `repos/iot/` | FarmBot `iot` monorepo, GitHub `farmbot-monitoring-solutions/iot` |
+
+To support a new codebase, add a profile; don't fork a skill.
 
 ### Skills
 
 | Skill | Purpose |
 | --- | --- |
-| `gitlab-code-review` | Review a branch/commit against its release base branch and Jira acceptance criteria, with an adversarial Codex pass (plus the Savi reviewers in Savi repos) |
-| `gitlab-push` | Commit, push to the user's fork, open GitLab MRs against the detected release branch, and link the MR in Jira |
-| `work-ticket` | Implement a Jira ticket end to end; runs inline so it can delegate to the Savi agents |
-| `qa-ticket` | Deploy the MR/RC artifact to the test server and QA a ticket with live interactive browser testing, system checks, and regression testing |
+| `work-ticket` | Implement a ticket end to end: readiness, base branch, tracer bullet, tests from AC, gates, specialist reviewers, Codex pass, hand-off to closeout. Runs inline so it can delegate |
+| `push` | Commit, push, and open an MR/PR on GitLab or GitHub with the repo's remotes, base branch, naming and template; link it in Jira |
+| `adversarial-review` | Review a change against its real base and the ticket's AC, with the specialist reviewers and an iterative Codex adversarial loop |
+| `review-follow-up` | Address review feedback on an MR/PR: verify and triage each thread, fix the class, re-validate, push, draft replies |
+| `ticket-closeout` | Verify AC against the change, post the closeout comment, tick boxes, carry findings into downstream tickets |
+| `ticket-write` | Draft, rewrite, or critique tickets against the shared standard (`skills/ticket-write/ticket-standard.md`) |
+| `backlog-sync` | Publish approved drafts to Jira, add real blocking links, and drift-check a design doc against its epic |
+| `epic-loop` | One iteration of the per-epic loop (sync, triage, closeout, restack, next ticket); state in `~/.claude/state/epic-loop/<EPIC>/` |
+| `qa-ticket` | Deploy the MR/PR or RC build to the test environment and QA a ticket with live browser testing, system checks, and regression testing |
 | `qa-acceptance-criteria` | Derive missing, testable acceptance criteria from a ticket and its MR/PR |
-| `rc-regression` | Regression-test a Savi release candidate (e.g. `release/v3.5.8-rc1`) by ticket or as a general regression, on a deployed build, with simulations/harnesses reported for future automation |
-| `review-follow-up` | Address review feedback on an existing MR: verify and triage each thread, fix, re-validate, push, and draft replies for approval |
-| `standup` | Build a standup from actual Jira and GitLab activity since the previous workday |
-| `mergeback` | Merge an older Savi release forward (or into develop) as a mechanical merge plus one adaptations commit, then open the MR |
-| `cut-release-branch` | Create the next Savi release branch (hotfix, rc, alpha, beta, point) and bump `RELEASE_VER` / `DRIVERS_RELEASE_VER` |
-| `finalize-release` | Walk the Savi release finalization checklist: mergebacks, next branch, MR sweep, fixVersion cleanup, release notes, tag, Jira release |
-| `iot-ticket-write` | FarmBot `iot`: draft, rewrite or critique MFB tickets against the team ticket standard (`skills/iot-ticket-write/ticket-standard.md`), iterating with the user |
-| `iot-backlog-sync` | FarmBot `iot`: publish approved drafts to Jira, add real blocking links, and drift-check a design doc against its epic |
-| `iot-work-ticket` | FarmBot `iot`: implement a ticket — readiness check, stacked base, spec-first, `vp` gates, Codex pass, PR via the repo template |
-| `iot-ticket-closeout` | FarmBot `iot`: verify AC against the PR, post the closeout comment, and carry review findings into downstream tickets |
+| `release-regression` | Regression-test a release candidate by ticket or as a general regression; GO / NO-GO report |
+| `release` | Cut the next release branch and bump versions, or walk the release finalization checklist |
+| `mergeback` | Merge an older release forward as a mechanical merge plus one adaptations commit, then open the MR/PR |
+| `standup` | Build a standup from actual Jira, GitLab and GitHub activity since the previous workday |
 
 ### Agents
 
-`slice-planner`, `impact-tracer`, `savi-invariant-reviewer`, `async-bug-hunter`, `spec-runner`,
-`spec-author`, `sled-e2e`, `mergeback-auditor`, `release-ticket-triage`, `qa-ticket`,
-`qa-acceptance-criteria`, `rc-regression`, `ticket-critic`, `legacy-source-scout`,
-`pr-stack-planner`.
-
-The first seven are Savi-specific and branch-aware: each detects whether it is in a DSP-line or
-main-line checkout (via `savi.yaml`) and applies that line's rules, and stops outside a Savi
-repo. `qa-ticket`, `qa-acceptance-criteria`, and `rc-regression` back the forked skills of the
-same name. `mergeback-auditor` and `release-ticket-triage` are read-only helpers for the Savi
-release skills. `ticket-critic`, `legacy-source-scout` and `pr-stack-planner` serve the FarmBot
-`iot-*` skills. See
-[`agents/README.md`](agents/README.md) for when to use each and how they compose.
+`impact-tracer`, `conventions-reviewer`, `async-bug-hunter`, `spec-runner`, `spec-author`,
+`ticket-critic`, `legacy-source-scout`, `pr-stack-planner`, `mergeback-auditor`,
+`release-ticket-triage`. See [`agents/README.md`](agents/README.md) for when to use each and
+how they compose.
 
 ## What is not tracked
 
 `.gitignore` is an allowlist: everything under `~/.claude` is ignored except the paths above.
 That keeps session transcripts (`projects/`), `history.jsonl`, logs, caches, plugin installs,
-file history, plans, shell snapshots, and skills synced from claude.ai (`skills/synced/`) out
-of the repo. Machine-local files such as `settings.local.json` and `.env` are ignored too.
+file history, plans, shell snapshots, skills synced from claude.ai (`skills/synced/`), and
+per-epic loop state (`state/`) out of the repo. Machine-local files such as `settings.local.json` and `.env` are ignored too.
 
 To track something new, add a `!/<path>` line to `.gitignore`.
 
