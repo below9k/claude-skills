@@ -1,153 +1,74 @@
 ---
 name: spec-runner
-description: Runs the Savi specs affected by the current change and triages every failure into real-bug / stale-spec / pre-existing / environment / vacuous. Detects the Savi line (DSP or main line) and uses the runner paths that actually work there; never improvises a runner. Use after edits, before a commit, or when a spec fails and you need to know whether to believe it.
+description: Runs the tests affected by the current change and triages every failure into real-bug / stale-spec / pre-existing / environment / vacuous. Uses the runner paths the repo profile and repo docs say actually work, and never improvises a runner — "could not run" is an acceptable answer, a false green is not. Use after edits, before a commit, or when a test fails and you need to know whether to believe it.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
 
 # Spec runner
 
-## Detect the Savi line first
+Run the *relevant* tests and produce a verdict someone can trust. Running the whole suite is
+almost never the right first move; it's slow and buries the signal.
 
-Run at the repo root before anything else:
+## Load the repo profile
 
-```sh
-ls -d lerna/packages savi.yaml CLAUDE.md 2>&1; git branch --show-current
-```
-
-- No `lerna/packages/` — not a Savi repo. Stop and say so.
-- `savi.yaml` present — **main line**. The repo's `CLAUDE.md` and `architecture.md` are
-  authoritative and win over this file wherever they differ. Apply the main-line notes below.
-- No `savi.yaml` — **DSP line** (`release/dsp/*` and branches cut from it). The rest of this
-  file is written for it and applies as-is.
-
-Name the line you detected in your output. Toolchain facts below marked with a date are
-*last observed*, not guaranteed — re-check before relying on them.
-
-**Main-line notes:**
-- Runner path is bazel: `./cli-bazel/bazel test //<pkg>:<target>`, with the target taken from
-  the package's `BUILD.bazel`. `cli-bazel/test-unit.sh` lists targets but may be stale —
-  verify each exists before trusting it.
-- `.ai-dev/tools/jest-shim/run-spec.js` runs jest-style driver specs without bazel (and inside
-  worktrees). It lacks `jest.mock`; report a spec that needs it as "needs bazel", not a fail.
-- The DSP runner paths below (`run-unit-tests.sh`, `lerna run test`, the rules_nodejs 404) do
-  not apply. The triage buckets and "do not improvise a runner" rule apply unchanged.
-
-Your job is to run the *relevant* specs and produce a trustworthy verdict. Running the
-whole suite is almost never the right first move — it is slow and buries the signal.
-
-## Three runner paths, and none of them is quick
-
-All 74 specs on this branch are mocha + chai (`describe`/`it`, `chai.expect`,
-`chai-as-promised`, `sinon`, `mock-require`). Establish which path works before promising
-a result.
-
-**1. `deployment/run-unit-tests.sh` — what CI actually runs, and the authority.**
-
-```sh
-METEOR_VERSION=<version> ./deployment/run-unit-tests.sh
-```
-
-Runs in the `savicontrols/savi-dev:${METEOR_VERSION}` Docker image: `bin/tools-setup`,
-rsync to `/tmp/savi/lerna`, `lerna bootstrap`, then `lerna run lint` and `lerna run test`
-with a fixed ignore list (`savi-ui`, `shef`, `cloud-daemon`, `sled-daemon`, `daemon`,
-`webos3`). Requires `METEOR_VERSION` set and the image available — neither is set up by
-default in a local clone. This runs everything; there is no way to scope it to one package.
-
-**2. `lerna run test` / mocha directly — the per-package path.**
-Only two packages have a real `test` script, and each globs its whole subtree:
-
-- `@savi/core` → `lerna/packages/core` → `mocha --exit "./{,!(node_modules)/**/}*.spec.js"`
-- `@savi/sled-core` → `lerna/packages/sled-core` → same
-
-Every other package's `test` script is `echo "Error: no test specified" && exit 0` — it
-passes vacuously and proves nothing. Never report one of those as a pass.
-
-This path needs `lerna bootstrap` first: mocha, chai, and sinon are **not** installed in
-`lerna/packages/node_modules`, `core/node_modules`, or `sled-core/node_modules` in a fresh
-clone. Check before running:
-
-```sh
-ls lerna/packages/core/node_modules/.bin/mocha
-```
-
-**3. `bazel test //<pkg>:unit_test` — targets exist, but bazel is currently broken here.**
-19 `BUILD.bazel` files call `savi_mocha_test` from `//bazel/js_library:mocha.bzl`, which
-generates a `unit_test` target per package, and `cli-bazel/test-unit.sh` lists the canonical
-set:
-
-```sh
-grep "'//" cli-bazel/test-unit.sh
-```
-
-That list is accurate. The runner is not: this branch pins `build_bazel_rules_nodejs` to
-`savicontrols/rules_nodejs v1.4.0-savi1`, whose release asset now **404s from GitHub**, so
-any `bazel query`/`build`/`test` fails at repository fetch:
-
-```
-ERROR: no such package '@build_bazel_rules_nodejs//': ... GET returned 404 Not Found
-```
-
-Last observed 2026-09-09 on the DSP clone; re-check. If it works for you, a warm bazel cache or an internal
-mirror is doing it — say which. Otherwise report bazel as unavailable rather than retrying.
+Follow `~/.claude/repos/README.md`: read the profile's `README.md` (**Validation**) and
+`testing.md`. They name the runner paths that work, the ones that are broken, and how to
+spot a vacuous pass. The repo's `CLAUDE.md` / `AGENTS.md` / CI config win. With no profile,
+find the runner from the repo: `package.json` scripts, `Makefile`, CI workflow files,
+`BUILD` files. Name the profile (and variant) and the runner you used.
 
 ## Do not improvise a runner
 
-If none of the three paths is usable, **say so and stop**. Do not hand-roll a harness, stub
-the missing chai matchers, or run a spec with bare `node` to get something green. A
-made-up runner produces *false passes*, which are worse than no answer. An honest "could
-not run, here is what needed running" is a complete result.
+If no documented runner path is usable, **say so and stop**. Don't hand-roll a harness, stub
+missing matchers, or run a spec with bare `node` to get something green. A made-up runner
+produces *false passes*, which are worse than no answer. "Could not run; here is what needed
+running" is a complete result.
 
 ## Workflow
 
-1. `git diff --name-only HEAD` (plus `--cached`) to get changed files.
-2. Map each changed file to its package — walk up to the nearest directory containing
-   `BUILD.bazel` and `package.json`.
-3. Find the specs that cover it: sibling `*.spec.js` first, then
-   `grep -rl "<changed-module-name>" --include='*.spec.js' lerna/packages/`. A changed
-   module with no spec is a finding — report it, don't silently skip it.
-4. Pick the cheapest runner path that is actually working (check `ls
-   lerna/packages/core/node_modules/.bin/mocha` before assuming path 2, and expect path 3
-   to fail at repository fetch). State which path you used.
-5. Triage every failure before reporting.
+1. `git diff --name-only HEAD` (plus `--cached`) for the changed files.
+2. Map each to its package or module (nearest manifest / build file).
+3. Find the tests that cover it: sibling test files first, then a grep for the module name
+   across test files. A changed module with no test is a finding; report it, don't skip it.
+4. Pick the cheapest runner path that actually works today, and check its prerequisites
+   (installed deps, a build step, a Docker image) before promising a result.
+5. If the runner can only run whole subtrees, expect failures that were already there.
+   Establish the baseline before blaming the diff: stash, re-run, compare.
+6. Triage every failure.
 
-Every path runs *whole subtrees*, not single specs — `savi_mocha_test` globs the package,
-and the `@savi/core` / `@savi/sled-core` scripts glob everything beneath them. So expect
-unrelated failures in an area that was already red. Establish that baseline before blaming
-the diff: `git stash`, re-run, compare. Say which failures were pre-existing.
-
-## Triage — required, not optional
+## Triage (required)
 
 Put every failure in exactly one bucket, with evidence:
 
-- **Real bug** — the production code is wrong. Quote the assertion, and say what the code
-  actually does that makes it fail.
-- **Stale spec** — behaviour changed intentionally and the spec encodes the old contract.
-  Say which diff hunk changed the contract.
-- **Pre-existing** — fails on the base commit too. Prove it with a stashed run.
-- **Environment** — un-bootstrapped `node_modules`, the `rules_nodejs` 404, a missing
-  Docker image, sandbox, worktree. Name the specific cause.
-- **Vacuous** — the package's `test` script is `echo "Error: no test specified" && exit 0`.
-  That is not a pass. Report it as untested.
+- **Real bug**: the production code is wrong. Quote the assertion and say what the code does
+  that makes it fail.
+- **Stale spec**: behaviour changed on purpose and the test encodes the old contract. Name
+  the diff hunk that changed it.
+- **Pre-existing**: fails on the base commit too. Prove it with a stashed run.
+- **Environment**: missing deps, broken toolchain, sandbox, worktree, network. Name the
+  cause.
+- **Vacuous**: the test target runs nothing (a stub script, a disabled target, zero tests
+  collected). That's not a pass; report it as untested.
 
-If you cannot distinguish real-bug from environment, say so explicitly and say what would
-settle it. Never round an unclear failure up to "the code is broken."
+If you can't tell real bug from environment, say so and say what would settle it. Never
+round an unclear failure up to "the code is broken".
 
 ## Do not
 
-- Do not edit specs to make them pass. If a spec is stale, report it and let the caller
-  decide. The one exception is when the caller explicitly asked you to update specs.
-- Do not run the full suite unless asked or unless the change is genuinely repo-wide.
-- Do not report "no specs found" as a pass.
+- Edit tests to make them pass, unless the caller explicitly asked you to update tests.
+- Run the full suite unless asked or the change is genuinely repo-wide.
+- Report "no tests found" as a pass.
 
 ## Output
 
 ```
-Runner: <run-unit-tests.sh (docker) | lerna/mocha | bazel> — or "none usable, because ..."
+Profile: <name/variant | none>
+Runner: <command/path> — or "none usable, because …"
 Ran: <what>
 PASS: <list>
-FAIL: <spec> — [real bug | stale spec | pre-existing | environment | vacuous] — reason
-NO TARGET: <pkg> — has specs but savi_mocha_test is commented out
-NO SPEC: <changed file> — untested by any spec
-Verdict: <safe to commit | N real failures | could not run, because ...>
+FAIL: <test> — [real bug | stale spec | pre-existing | environment | vacuous] — reason
+NO TARGET: <pkg> — has tests that no runner executes
+NO SPEC: <changed file> — untested
+Verdict: <safe to commit | N real failures | could not run, because …>
 ```

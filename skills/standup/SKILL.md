@@ -2,15 +2,15 @@
 name: standup
 description: >
   Use this skill whenever the user asks to prepare, generate, summarize, or
-  review their standup or daily status update. Use Jira MCP and GitLab MCP
+  review their standup or daily status update. Use Jira MCP and the forges (GitLab MCP, GitHub `gh`)
   to determine what the user actually worked on rather than relying only on
-  conversation context. Review the user's recent Jira tickets, GitLab commits,
-  branches, merge requests, code reviews performed, review feedback addressed,
+  conversation context. Review the user's recent Jira tickets, commits,
+  branches, merge requests and pull requests, code reviews performed, review feedback addressed,
   QA activity, and other relevant development activity. By default, summarize
   work completed since the previous workday, identify work currently in
   progress or planned next, and surface blockers or items needing attention.
   Produce a concise standup suitable for sharing with the engineering team.
-  Do not modify Jira or GitLab unless explicitly requested.
+  Do not modify Jira, GitLab, or GitHub unless explicitly requested.
 ---
 
 # Standup
@@ -18,7 +18,7 @@ description: >
 ## Purpose
 
 Generate an accurate engineering standup based primarily on actual Jira and
-GitLab activity.
+forge activity (GitLab and GitHub), across every repo the user works in.
 
 The standup should answer:
 
@@ -28,7 +28,7 @@ The standup should answer:
 
 Prefer concrete development activity over generic summaries.
 
-Use Jira and GitLab as evidence rather than inventing or assuming work.
+Use Jira and the forges as evidence rather than inventing or assuming work.
 
 ---
 
@@ -86,9 +86,17 @@ to represent immediate upcoming work.
 
 ---
 
-# Phase 2 — Gather GitLab Activity
+# Phase 2 — Gather Forge Activity
 
-Use GitLab MCP to inspect the user's development activity during the standup
+The user may work across several repos and trackers. The repo profiles in
+`~/.claude/repos/*/README.md` list the known ones (forge, project path, Jira
+site and project keys); check each, plus any repo the user names. Use the
+GitLab MCP for GitLab projects and `gh` for GitHub (e.g.
+`gh search prs --author @me --updated ">=<date>"`,
+`gh search prs --reviewed-by @me --updated ">=<date>"`). In this skill, "MR"
+means a GitLab merge request or a GitHub pull request.
+
+Inspect the user's development activity during the standup
 period.
 
 Look for:
@@ -103,12 +111,13 @@ Look for:
 - Pipeline/build activity when meaningful.
 - QA or fixes resulting from review feedback.
 
-Pay particular attention to branches following the project's ticket naming
-convention:
+Pay particular attention to branches following each project's ticket naming
+convention (from its profile), e.g.:
 
     PRJ-####/PRJ-###-<description>
+    feat/prj-123-<description>
 
-Use ticket identifiers to correlate GitLab activity with Jira.
+Use ticket identifiers to correlate forge activity with Jira.
 
 Do not list individual commits when several commits represent the same piece
 of work.
@@ -127,7 +136,7 @@ rather than:
 
 # Phase 3 — Gather Code Review Activity
 
-Use GitLab MCP to identify code review activity performed by the user during
+Use the forges to identify code review activity performed by the user during
 the standup period.
 
 Code review is meaningful engineering work and should be included in the
@@ -242,9 +251,9 @@ Normal pending review should not automatically be classified as a blocker.
 
 ---
 
-# Phase 4 — Correlate Jira and GitLab
+# Phase 4 — Correlate Jira and the Forges
 
-Combine Jira and GitLab information into logical work items.
+Combine Jira and forge information into logical work items.
 
 For example:
 
@@ -265,7 +274,7 @@ multiple systems.
 
 Use Jira to understand what the work was intended to accomplish.
 
-Use GitLab to understand what development activity actually occurred.
+Use the forges to understand what development activity actually occurred.
 
 ---
 
@@ -301,7 +310,7 @@ over:
 
 # Phase 6 — Determine Current / Next Work
 
-Use Jira status, open GitLab branches, open MRs, and recent activity to
+Use Jira status, open branches, open MRs/PRs, and recent activity to
 identify work likely to continue today.
 
 Prioritize:
@@ -411,7 +420,7 @@ Ticket identifiers may be included when useful.
 
 Do not invent activity.
 
-If Jira and GitLab disagree, investigate the discrepancy when practical.
+If Jira and a forge disagree, investigate the discrepancy when practical.
 
 For example, a Jira ticket may still say "In Progress" even though its MR was
 merged.
@@ -454,7 +463,7 @@ section containing:
 
     Ticket:
     Status:
-    GitLab activity:
+    Forge activity (GitLab/GitHub):
     Current state:
     Next action:
     Potential blocker:
